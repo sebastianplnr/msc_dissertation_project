@@ -36,6 +36,7 @@ model_time_glmer1 # takes between 1.5 and 30 minutes on my machine
 
 
 # generalised linear model
+# i'm assuming Ref and Player make the models run for ages since they have a lot of levels.
 model_start_glm1 = Sys.time()
 glm1 = glm(allreds ~ ContSkinTone*ImpBias + ContSkinTone*ExpBias +
                        league + SpecificPos + Ref + Player,
