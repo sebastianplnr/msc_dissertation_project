@@ -93,6 +93,8 @@ Finaldat <- data.frame(Player = as.factor(dat$playerShort),
                        allreds = as.numeric(dat$allreds),
                        league = as.factor(dat$leagueCountry))
 
+# write.csv(Finaldat, here("data", "final_data_set.csv"), row.names = FALSE)
+
 # uncommment this line to use centered skintone variable (makes little difference).
 # Finaldat <- data.frame(Player = as.factor(dat$playerShort),
 #                        GeneralPos = as.factor(GeneralPos),
@@ -113,10 +115,12 @@ Finaldat <- data.frame(Player = as.factor(dat$playerShort),
 #                                 (1|Ref) + (1|Player),
 #                               data = Finaldat, family = "binomial", nAGQ = 0)
 
+time_start = Sys.time()
 FootballFinal4.glmm <- glmer(allreds ~ ContSkinTone*ImpBias + ContSkinTone*ExpBias +
                                league + SpecificPos +
                                (1|Ref) + (1|Player),
                              data = Finaldat, family = "binomial", nAGQ = 0)
+time_finish = Sys.time()
 
 saveRDS(FootballFinal4.glmm, "FootballFinal4.glmm_model.rds")
 # FootballFinal4.glmm <- readRDS("FootballFinal4.glmm_model.rds")

@@ -1,14 +1,15 @@
-library(MCMCglmm)
 library(lme4)
 
+# set wkdir to root directory of the repository
 file_path = "/Users/sebastian/Documents/Uni/Sheffield (MSc)/2. Semester/Research Project/msc_dissertation_project"
 setwd(file_path)
 
 library("here")
 
+# load data (it's the final data i.e.,  all cleaning has been done)
 dat = read.csv(here("data", "final_data_set.csv"))
 
-# based on the redcard_analysisFINAL.R script of the orignal analysis (Team 23)
+# based on the redcard_analysisFINAL.R script of the original analysis (Team 23) as variable types
 dat$Player = as.factor(dat$Player)
 dat$GeneralPos = as.factor(dat$GeneralPos)
 dat$SpecificPos = as.factor(dat$SpecificPos)
@@ -31,8 +32,7 @@ glmer1 = glmer(allreds ~ ContSkinTone*ImpBias + ContSkinTone*ExpBias +
                          data = dat, family = "binomial", nAGQ = 0)
 model_stop_glmer1 = Sys.time()
 model_time_glmer1 = model_stop_glmer1 - model_start_glmer1
-print(model_time_glmer1)
-# Tom's XPS = ... (26.9s?)
+model_time_glmer1 # takes between 1.5 and 30 minutes on my machine
 
 
 # generalised linear model
@@ -42,8 +42,7 @@ glm1 = glm(allreds ~ ContSkinTone*ImpBias + ContSkinTone*ExpBias +
                      data = dat, family = "binomial")
 model_stop_glm1 = Sys.time()
 model_time = model_stop_glm1 - model_start_glm1
-print(model_time_glm1)
-#Tom's XPS = ... (26.9s?)
+model_time_glm1 # never finishes running
 
 summary(glmer1)
 summary(glm1)

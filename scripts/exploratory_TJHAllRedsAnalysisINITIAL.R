@@ -178,4 +178,3 @@ exp(PointEst)
 exp(CIUpper)
 exp(CIlower)
 
-glm(allreds ~ NoWhite + GeneralPos + Ref + Player, data = Finaldat, family = "binomial")
