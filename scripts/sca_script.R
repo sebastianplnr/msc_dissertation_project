@@ -106,7 +106,7 @@ ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
 ef_sample = sample(formula_ef, n_sample, replace = FALSE)
 
 # preparing parallel processing
-num_cores = detectCores() - 2 # keep one core of other tasks
+num_cores = detectCores() - 2 # Not using all cores due to working memory limitations
 
 # Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time.
 all_models_glmer_results = pbmclapply(ranef_sample, mc.cores = num_cores, function(x) glmer(x, data = dat, family = "binomial", nAGQ = 0))
