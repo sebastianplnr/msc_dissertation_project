@@ -5,6 +5,6 @@
 
 /attic
 
-/data
+/data/*.csv
 
 /scripts/*.RData
