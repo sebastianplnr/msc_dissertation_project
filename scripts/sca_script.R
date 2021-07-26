@@ -68,6 +68,9 @@ variables = c("Name", "Height (in cm)", "Weight (in kg)", "Age (in years)", "Spe
 # Dependent variables
 dv = c("all_reds", "red_cards", "yellow_red_cards", "yellow_cards")
 
+# "Base variable"
+base_var = c("skin_tone_num")
+
 # Independent variables
 iv = c("(1|player)", "height_cm", "weight_kg", "age_yrs", "specific_pos", "club", "league_country", "games", "goals", "victories", "(1|ref)", "ref_country", "ref_games", "imp_bias", "exp_bias")
 
@@ -78,19 +81,31 @@ var.all = c(dv, iv)
 varList = list()
 varList[["variables"]] = variables
 varList[["dv"]] = dv
+varList[["base_var"]] = base_var
 varList[["iv"]] = iv
 varList[["var.all"]] = var.all
 
 
 #.................. Prepare specifications: Create data frame from all combinations of covariates .........#
 # Create TRUE/FALSE matrix for every combination of covariates
-specifications = expand.grid(rep(list(0:1), length(iv))) == TRUE
+specifications = data.frame(expand.grid(rep(list(0:1), length(iv))) == TRUE)
 
 # Set column names
 colnames(specifications) = iv
 
-# Create a list included formula for every (standardised) covariate combination
-all_models = apply(specifications, 1, function(x) paste(c("all_reds ~ skin_tone_num", iv[x]), collapse = " + "))
+# Add dependent variable and "base variable"
+all_reds = c(rep(TRUE, nrow(specifications)))
+skin_tone_num = c(rep(TRUE, nrow(specifications)))
+
+specifications = add_column(specifications, all_reds, .before = iv[1])
+specifications = add_column(specifications, skin_tone_num, .before = iv[1])
+
+# Create a list included formula for every covariate combination
+base_model = paste(dv[1], "~", base_var)
+
+all_models = apply(specifications[3:ncol(specifications)], # starting from [, 3] as the first two columns being dv and base_var
+                   1, # loop through rows
+                   function(x) paste(c(base_model, iv[x]), collapse = " + ")) # create formulas
 
 # Identify random effects
 all_models_index = grepl("(1|", all_models, fixed = TRUE)
@@ -116,49 +131,50 @@ all_models_glm_results = pbmclapply(ef_sample, mc.cores = num_cores, function(x)
 names(all_models_glmer_results) = ranef_sample
 names(all_models_glm_results) = ef_sample
 
-# Extract estimates from models. Glmer and glm have different output structures, hence, separate functions are applied.
-# Thought their only difference is "fixef" vs. "coef" to extract the estimates.
-extract_fixef = function(x) {
+# Extract estimates from models
+extract_estimates = function(model_list, var_estimate) {
+  
+  model_summary = list()
   estimate = c()
   se = c()
+  z_value = c()
+  p_value = c()
   
-  for(i in 1:length(x)) {
-    estimate[i] = fixef(x[[i]])["skin_tone_num"]
-    se[i] = sqrt(vcov(x[[i]])["skin_tone_num", "skin_tone_num"])
+  for(i in 1:length(model_list)) {
+    model_summary[[i]] = summary(model_list[[i]])
+    
+    estimate[i] = model_summary[[i]]$coefficients[var_estimate, "Estimate"]
+    se[i] = model_summary[[i]]$coefficients[var_estimate, "Std. Error"]
+    z_value[i] = model_summary[[i]]$coefficients[var_estimate, "z value"]
+    p_value[i] = model_summary[[i]]$coefficients[var_estimate, "Pr(>|z|)"]
+    
   }
   
-  results_df = data.frame(cbind(names(x), estimate, se))
+  model_formula = names(model_list)
+  
+  results_df = data.frame(cbind(model_formula, estimate, se, z_value, p_value))
   results_df$estimate = as.numeric(results_df$estimate)
   results_df$se = as.numeric(results_df$se)
+  results_df$z_value = as.numeric(results_df$z_value)
+  results_df$p_value = as.numeric(results_df$p_value)
   
   return(results_df)
-} # extract estimates from glmer
+}
 
-
-extract_ef = function(x) {
-  estimate = c()
-  se = c()
-  
-  for(i in 1:length(x)) {
-    estimate[i] = coef(x[[i]])["skin_tone_num"]
-    se[i] = sqrt(vcov(x[[i]])["skin_tone_num", "skin_tone_num"])
-  }
-  
-  results_df = data.frame(cbind(names(x), estimate, se))
-  results_df$estimate = as.numeric(results_df$estimate)
-  results_df$se = as.numeric(results_df$se)
-  
-  return(results_df)
-} # extract estimates from glm
-
-
-effects_glmer = extract_fixef(all_models_glmer_results)
-effects_glm = extract_ef(all_models_glm_results)
+effects_glmer = extract_estimates(all_models_glmer_results, "skin_tone_num")
+effects_glm = extract_estimates(all_models_glm_results, "skin_tone_num")
 
 effects_df = rbind(effects_glmer, effects_glm)
 
-# Calculate confidence intervals (CI)
+# In case of remote processing: remove models from environment after extracting results due to taking up to much space for file transferring
+# rm(all_models_glmer_results)
+# rm(all_models_glm_results)
+
+# Set significant level (alpha). Calculate confidence intervals (CI)
+alpha_level = 0.05
 z = 1.96 # 95% CI
+
+effects_df$below_alpha = with(effects_df, ifelse(p_value < alpha_level, TRUE, FALSE))
 
 effects_df$ci_lower = with(effects_df, estimate - z*se)
 effects_df$ci_upper = with(effects_df, estimate + z*se)
@@ -182,7 +198,8 @@ effects_df %>%
                    alpha = 0.5, colour = NA) +
   
   geom_point(aes(x = 0.6, # preventing the points from overlapping with the box plot
-                 y = estimate_oddsratio),
+                 y = estimate_oddsratio,
+                 colour = below_alpha),
              position = position_jitter(width = .03, seed = 123), size = 1, shape = 20) +
   
   geom_boxplot(aes(x = 0.851,
