@@ -195,11 +195,9 @@ effects_df %>%
              linetype = "dashed", 
              color = "black") +
   
-  coord_flip() + theme_classic() + 
+  coord_flip() + theme_classic() + labs(y = "Skin tone odds ratio") +
   
   theme(legend.position = "none",
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank(),
-        axis.text.y = element_blank()) +
-  
-  labs(y = "Skin tone odds ratio")
+        axis.text.y = element_blank())
