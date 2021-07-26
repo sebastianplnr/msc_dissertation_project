@@ -98,12 +98,13 @@ all_reds = c(rep(TRUE, nrow(specifications)))
 skin_tone_num = c(rep(TRUE, nrow(specifications)))
 
 specifications = add_column(specifications, all_reds, .before = iv[1])
-specifications = add_column(specifications, skin_tone_num, .before = iv[1])
+specifications = add_column(specifications, skin_tone_num, .after = "all_reds") # ".after" to make sure the previous column addition worked
 
-# Create a list included formula for every covariate combination
+# Create base model formula
 base_model = paste(dv[1], "~", base_var)
 
-all_models = apply(specifications[3:ncol(specifications)], # starting from [, 3] as the first two columns being dv and base_var
+# Create a list including a formula for every covariate combination
+all_models = apply(specifications[3:ncol(specifications)], # starting from [, 3] as the first two columns are dv and base_var
                    1, # loop through rows
                    function(x) paste(c(base_model, iv[x]), collapse = " + ")) # create formulas
 
@@ -114,16 +115,16 @@ all_models_index = grepl("(1|", all_models, fixed = TRUE)
 formula_ranef = all_models[all_models_index]
 formula_ef = all_models[!all_models_index]
 
-# Sample from all model specifications
+# Sample from all model specifications for a "minimum viable product" to work with
 n_sample = 10
 
 ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
 ef_sample = sample(formula_ef, n_sample, replace = FALSE)
 
-# preparing parallel processing
+# Preparing parallel processing
 num_cores = detectCores() - 2 # Not using all cores due to working memory limitations
 
-# Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time.
+# Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time
 all_models_glmer_results = pbmclapply(ranef_sample, mc.cores = num_cores, function(x) glmer(x, data = dat, family = "binomial", nAGQ = 0))
 all_models_glm_results = pbmclapply(ef_sample, mc.cores = num_cores, function(x) glm(x, data = dat, family = "binomial"))
 
