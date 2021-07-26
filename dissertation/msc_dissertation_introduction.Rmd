@@ -1,0 +1,41 @@
+---
+title: "__How analysis strategy affects analysis results__"
+subtitle: "Vibration of effects due to model specifications"
+author: "Sebastian Ploner, sploner1@sheffield.ac.uk, University of Sheffield"
+linestretch: 1.5
+output: pdf_document
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+# Introduction
+
+
+@silberzahn2018 investigated the effects of analytical choices on results. Specifically, they had 29 teams of researchers investigate the same research question with the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect, and the odds-ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for prior believes, experience and peer rated analysis quality, none of them accounted for the variation of results.
+
+This study puts (psychological) research in a delicate position, because if researchers with honest intentions come to such drastically different conclusions despite starting off on the identical dataset what does this mean for the rest of studies? 
+
+
+
+
+The Covid-19 pandemic has reaffirmed the need for rigorous scientific research, but the process is not straightforward. In fact, Ioannidis 2005 argued that most study findings are false positives due to flawed study designs and insufficient sample sizes. 
+
+@silberzahn2018
+
+@patel2015
+
+@haessler2020
+
+# Methods
+
+
+
+\newpage
+# References
