@@ -22,9 +22,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This study puts (psychological) research in a delicate position, because if researchers with honest intentions come to such drastically different conclusions despite starting off on the identical dataset what does this mean for the rest of studies? 
 
-
-
-
 The Covid-19 pandemic has reaffirmed the need for rigorous scientific research, but the process is not straightforward. In fact, Ioannidis 2005 argued that most study findings are false positives due to flawed study designs and insufficient sample sizes. 
 
 @silberzahn2018
@@ -35,7 +32,9 @@ The Covid-19 pandemic has reaffirmed the need for rigorous scientific research, 
 
 # Methods
 
+# Results
 
+# Discussion
 
 \newpage
 # References

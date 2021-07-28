@@ -1,6 +1,6 @@
 # WARNING: The following line of code will remove all objects from the workspace. 
 #          Please consider saving your workspace.
-rm(list=ls()) 
+rm(list = ls()) 
 
 
 #................................# Set parameters #..................................#
@@ -32,9 +32,10 @@ if(!is.null(sessionInfo()$otherPkgs)) {
                    detach, character.only = TRUE, unload = TRUE))
 }
 
+
 # Download and install missing packages
 requiredPackages = c("psych", "plotrix", "rstudioapi", "DescTools", # packages needed?
-                     "here", "data.table", "tidyverse", "lme4", "parallel", "pbmcapply", "PupillometryR")
+                     "here", "data.table", "tidyverse", "lme4", "parallel", "PupillometryR")
 
 missingPackages = requiredPackages[!requiredPackages %in% installed.packages()[ , "Package"]]
 
@@ -42,14 +43,16 @@ if(length(missingPackages)) {
   install.packages(missingPackages)
 }
 
+
 # Load required packages
 invisible(lapply(requiredPackages, require, character.only = TRUE))
+
 
 # Source script containing functions required to run the master script
 # source(here("scripts", "my_functions.R"))
 
 # Load data
-dat = data.frame(fread(here("data", "3_prepared_data.csv")))
+dat = data.frame(fread(here::here("data", "3_prepared_data.csv")))
 
 
 #..........................................................................................................#
@@ -63,97 +66,95 @@ dat = data.frame(fread(here("data", "3_prepared_data.csv")))
 
 #...# Prepare variables needed for specification curve analysis
 # Full variable names
-variables = c("Name", "Height (in cm)", "Weight (in kg)", "Age (in years)", "Specific position", "Club", "League country", "Number of games", "Number of goals", "Number of victories", "Yellow cards", "Yellow/red cards", "Red cards", "all_reds",  "Referee ID", "Referee country", "Referee number of games", "Implicit bias", "Explicit bias")
+variables = c("All red cards",
+              "Skin tone (num)", "Implicit bias", "Explicit bias",
+              "Player position", "Player’s height (in cm)", "Player’s weight (in kg)", "Player’s league country", "Player’s age (in years)", "Goals scored by player", "Player’s club", "Referee’s country", "Referee", "Player’s number of victories", "Number of cards received by player", "Player", "Number of cards awarded by referee", "Number of draws", "Number games")
+
 
 # Dependent variables
-dv = c("all_reds", "red_cards", "yellow_red_cards", "yellow_cards")
+dv = c("all_reds")
+
 
 # "Base variable"
-base_var = c("skin_tone_num")
+base_var = c("skin_tone_num", "imp_bias", "exp_bias")
+
 
 # Independent variables
-iv = c("(1|player)", "height_cm", "weight_kg", "age_yrs", "specific_pos", "club", "league_country", "games", "goals", "victories", "(1|ref)", "ref_country", "ref_games", "imp_bias", "exp_bias")
+co_var = c("as.factor(specific_pos)", "height_cm", "weight_kg", "as.factor(league_country)", "age_yrs", "goals", "as.factor(club)", "as.factor(ref_country)", "(1|ref)", "victories", "player_cards_received", "(1|player)", "ref_cards_assigned", "ties", "games")
+
 
 # All variables needed to conduct specification curve analysis
-var.all = c(dv, iv)
+var_all = c(dv, base_var, co_var)
+
 
 # create list including variables
 varList = list()
 varList[["variables"]] = variables
 varList[["dv"]] = dv
 varList[["base_var"]] = base_var
-varList[["iv"]] = iv
-varList[["var.all"]] = var.all
+varList[["co_var"]] = co_var
+varList[["var_all"]] = var_all
 
 
 #.................. Prepare specifications: Create data frame from all combinations of covariates .........#
 # Create TRUE/FALSE matrix for every combination of covariates
-specifications = data.frame(expand.grid(rep(list(0:1), length(iv))) == TRUE)
+specifications = data.frame(expand.grid(rep(list(0:1), length(co_var))) == TRUE)
+
 
 # Set column names
-colnames(specifications) = iv
+colnames(specifications) = co_var
+
 
 # Add dependent variable and "base variable"
 all_reds = c(rep(TRUE, nrow(specifications)))
 skin_tone_num = c(rep(TRUE, nrow(specifications)))
+imp_bias = c(rep(TRUE, nrow(specifications)))
+exp_bias = c(rep(TRUE, nrow(specifications)))
 
-specifications = add_column(specifications, all_reds, .before = iv[1])
+specifications = add_column(specifications, all_reds, .before = co_var[1])
 specifications = add_column(specifications, skin_tone_num, .after = "all_reds") # ".after" to make sure the previous column addition worked
+specifications = add_column(specifications, imp_bias, .after = "skin_tone_num")
+specifications = add_column(specifications, exp_bias, .after = "imp_bias")
+
 
 # Create base model formula
-base_model = paste(dv[1], "~", base_var)
+base_model = paste(dv[1], " ~ ", base_var[1], "*", base_var[2], " + ", base_var[1], "*", base_var[3], sep = "")
+
 
 # Create a list including a formula for every covariate combination
-all_models = apply(specifications[3:ncol(specifications)], # starting from [, 3] as the first two columns are dv and base_var
+all_models = apply(specifications[ , (length(dv) + length(base_var) + 1):ncol(specifications)], # starting from first covariate as the first columns are dependent and base variables
                    1, # loop through rows
-                   function(x) paste(c(base_model, iv[x]), collapse = " + ")) # create formulas
+                   function(x) paste(c(base_model, co_var[x]), collapse = " + ")) # create formulas
+
+
+# adding the formulas are a dedicated columns to the specification data frame
+specifications$formula = all_models 
+
 
 # Identify random effects
 all_models_index = grepl("(1|", all_models, fixed = TRUE)
+
 
 # Divide formulas based on including random effects
 formula_ranef = all_models[all_models_index]
 formula_ef = all_models[!all_models_index]
 
-# Sample from all model specifications for a "minimum viable product" to work with
-n_sample = 10
 
-ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
-ef_sample = sample(formula_ef, n_sample, replace = FALSE)
-
-# Preparing parallel processing
-num_cores = detectCores() - 2 # Not using all cores due to working memory limitations
-
-# Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time
-all_models_glmer_results = pbmclapply(ranef_sample, mc.cores = num_cores, function(x) glmer(x, data = dat, family = "binomial", nAGQ = 0))
-all_models_glm_results = pbmclapply(ef_sample, mc.cores = num_cores, function(x) glm(x, data = dat, family = "binomial"))
-
-# lapply doesn't keep the name, hence, re-assigning them
-names(all_models_glmer_results) = ranef_sample
-names(all_models_glm_results) = ef_sample
-
-# Extract estimates from models
-extract_estimates = function(model_list, var_estimate) {
+# Function extracting estimates, se, z-values and p-value from models.
+# Use as wrapper function around the models to extract relevant statistics only and reducing the output size.
+extract_statistics = function(model, var_estimate) {
   
-  model_summary = list()
   estimate = c()
   se = c()
   z_value = c()
   p_value = c()
   
-  for(i in 1:length(model_list)) {
-    model_summary[[i]] = summary(model_list[[i]])
-    
-    estimate[i] = model_summary[[i]]$coefficients[var_estimate, "Estimate"]
-    se[i] = model_summary[[i]]$coefficients[var_estimate, "Std. Error"]
-    z_value[i] = model_summary[[i]]$coefficients[var_estimate, "z value"]
-    p_value[i] = model_summary[[i]]$coefficients[var_estimate, "Pr(>|z|)"]
-    
-  }
+  estimate = model$coefficients[var_estimate, "Estimate"]
+  se = model$coefficients[var_estimate, "Std. Error"]
+  z_value = model$coefficients[var_estimate, "z value"]
+  p_value = model$coefficients[var_estimate, "Pr(>|z|)"]
   
-  model_formula = names(model_list)
-  
-  results_df = data.frame(cbind(model_formula, estimate, se, z_value, p_value))
+  results_df = data.frame(cbind(estimate, se, z_value, p_value))
   results_df$estimate = as.numeric(results_df$estimate)
   results_df$se = as.numeric(results_df$se)
   results_df$z_value = as.numeric(results_df$z_value)
@@ -162,33 +163,60 @@ extract_estimates = function(model_list, var_estimate) {
   return(results_df)
 }
 
-effects_glmer = extract_estimates(all_models_glmer_results, "skin_tone_num")
-effects_glm = extract_estimates(all_models_glm_results, "skin_tone_num")
 
-effects_df = rbind(effects_glmer, effects_glm)
+# Sample from all model specifications for a "minimum viable product" to work with
+n_sample = 2
 
-# In case of remote processing: remove models from environment after extracting results due to taking up to much space for file transferring
-# rm(all_models_glmer_results)
-# rm(all_models_glm_results)
+ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
+ef_sample = sample(formula_ef, n_sample, replace = FALSE)
+
+
+# Preparing parallel processing
+num_cores = detectCores() - 2 # Not using all cores due to working memory limitations
+
+
+# Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time.
+# Calling summary to reduce the object size and save storage. Wrap model call within the above-define function.
+all_models_glmer_results = mclapply(ranef_sample,
+                                    mc.cores = num_cores,
+                                    function(x) extract_statistics(summary(glmer(x, data = dat, family = "binomial", nAGQ = 0)), "skin_tone_num"))
+
+all_models_glm_results = mclapply(ef_sample,
+                                  mc.cores = num_cores,
+                                  function(x) extract_statistics(summary(glm(x, data = dat, family = "binomial")), "skin_tone_num"))
+
+
+# lapply doesn't keep the name, hence, re-assigning them
+names(all_models_glmer_results) = ranef_sample
+names(all_models_glm_results) = ef_sample
+
+
+# Converting list to data frame while retaining item names
+statistics_glmer = as.data.frame(do.call(rbind, all_models_glmer_results))
+statistics_glm = as.data.frame(do.call(rbind, all_models_glm_results))
+
+df = rbind(statistics_glmer, statistics_glm)
+
 
 # Set significant level (alpha). Calculate confidence intervals (CI)
 alpha_level = 0.05
 z = 1.96 # 95% CI
 
-effects_df$below_alpha = with(effects_df, ifelse(p_value < alpha_level, TRUE, FALSE))
+df$below_alpha = with(df, ifelse(p_value < alpha_level, TRUE, FALSE))
 
-effects_df$ci_lower = with(effects_df, estimate - z*se)
-effects_df$ci_upper = with(effects_df, estimate + z*se)
+df$ci_lower = with(df, estimate - z*se)
+df$ci_upper = with(df, estimate + z*se)
+
 
 # Calculate odds-ratios i.e., exponentiate
-effects_df$estimate_oddsratio = with(effects_df, exp(estimate))
-effects_df$ci_lower_oddsratio = with(effects_df, exp(ci_lower))
-effects_df$ci_upper_oddsratio = with(effects_df, exp(ci_upper))
+df$estimate_oddsratio = with(df, exp(estimate))
+df$ci_lower_oddsratio = with(df, exp(ci_lower))
+df$ci_upper_oddsratio = with(df, exp(ci_upper))
 
 
 #............................................# Rain cloud plot #...........................................#
 
-effects_df %>%
+df %>%
   
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   

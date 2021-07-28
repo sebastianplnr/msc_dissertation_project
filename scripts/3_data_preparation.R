@@ -1,18 +1,24 @@
 library("here")
 library("data.table")
+library("tidyverse")
+library("plyr")
 library("lme4")
 
 # from raw data generate disaggregated data for logistic regression via 2_data_disaggregate.py
-dat = data.frame(fread(here("data", "2_disaggregated_data.csv")))
+dat = data.frame(fread(here::here("data", "2_disaggregated_data.csv")))
 
+# Silberzahn et al. 2018 list all covariates among them are two that need to be calculated: the cumulated number of cards received by a player and assigned by a referee.
+# The calculations of these covariates follows Morey and Wagenmarkers who were the team to use both covariates.
+dat = dat %>% group_by(player) %>% mutate(player_all_cards_received = sum(yellowCards + yellowReds + redCards))
+dat = dat %>% group_by(refNum) %>% mutate(ref_all_cards_assigned = sum(yellowCards + yellowReds + redCards))
 
 # select only the columns we will use in the analysis
 # adding all used covariates mentioned in Silberzahn et al. (2018) incl. main variables
 dat <- dat[, c("playerShort", "height", "weight", "birthday", "position",
                "club", "leagueCountry",
                "games",  "goals", "victories", "ties", 
-               "yellowCards", "yellowReds", "redCards", "allreds", "allredsStrict",
-               "refNum", "refCountry", "refCount",
+               "yellowCards", "yellowReds", "redCards", "allreds", "allredsStrict", "player_all_cards_received",
+               "refNum", "refCountry", "refCount", "ref_all_cards_assigned",
                "meanIAT", "meanExp", "skintone")]
 
 # if we're on windows or mac you need to force the bias variables into numeric
@@ -84,7 +90,7 @@ Finaldat <- data.frame(player = as.factor(dat$playerShort),
                        height_cm = as.numeric(dat$height),
                        weight_kg = as.numeric(dat$weight),
                        age_yrs = as.numeric(calc_age_years(dat$birthday, "%d.%m.%Y")),
-                       general_pos = as.factor(GeneralPos),
+                       # general_pos = as.factor(GeneralPos),
                        specific_pos = as.factor(dat$position),
                        club = as.factor(dat$club),
                        league_country = as.factor(dat$leagueCountry),
@@ -92,22 +98,24 @@ Finaldat <- data.frame(player = as.factor(dat$playerShort),
                        goals = as.numeric(dat$goals),
                        victories = as.numeric(dat$victories),
                        ties = as.numeric(dat$ties),
-                       yellow_cards = as.numeric(dat$yellowCards),
-                       yellow_red_cards = as.numeric(dat$yellowReds),
-                       red_cards = as.numeric(dat$redCards),
+                       # yellow_cards = as.numeric(dat$yellowCards),
+                       # yellow_red_cards = as.numeric(dat$yellowReds),
+                       # red_cards = as.numeric(dat$redCards),
                        all_reds = as.numeric(dat$allreds),
+                       player_cards_received = as.numeric(dat$player_all_cards_received),
                        ref = as.factor(dat$refNum),
                        ref_country = as.factor(dat$refCountry),
-                       ref_games = as.numeric(dat$refCount),
-                       skin_tone_fct = as.factor(dat$skintone),
+                       ref_cards_assigned = as.numeric(dat$ref_all_cards_assigned),
+                       # ref_games = as.numeric(dat$refCount),
+                       # skin_tone_fct = as.factor(dat$skintone),
                        skin_tone_num = as.numeric(dat$skintone),
-                       no_white = (dat$skintone > 1),
+                       # no_white = (dat$skintone > 1),
                        imp_bias = as.numeric(centImpBias),
                        exp_bias = as.numeric(centExpBias))
 
 
 # save as csv
-write.csv(Finaldat, here("data", "3_prepared_data.csv"), row.names = FALSE)
+write.csv(Finaldat, here::here("data", "3_prepared_data.csv"), row.names = FALSE)
 
 
 # for model selection see TJHAllRedsAnalysis.R
