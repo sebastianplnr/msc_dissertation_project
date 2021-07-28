@@ -1,6 +1,6 @@
 # WARNING: The following line of code will remove all objects from the workspace. 
 #          Please consider saving your workspace.
-rm(list = ls()) 
+rm(list = ls())
 
 
 #................................# Set parameters #..................................#
@@ -96,6 +96,7 @@ varList[["co_var"]] = co_var
 varList[["var_all"]] = var_all
 
 
+
 #.................. Prepare specifications: Create data frame from all combinations of covariates .........#
 # Create TRUE/FALSE matrix for every combination of covariates
 specifications = data.frame(expand.grid(rep(list(0:1), length(co_var))) == TRUE)
@@ -165,7 +166,7 @@ extract_statistics = function(model, var_estimate) {
 
 
 # Sample from all model specifications for a "minimum viable product" to work with
-n_sample = 2
+n_sample = 100
 
 ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
 ef_sample = sample(formula_ef, n_sample, replace = FALSE)
@@ -191,11 +192,16 @@ names(all_models_glmer_results) = ranef_sample
 names(all_models_glm_results) = ef_sample
 
 
-# Converting list to data frame while retaining item names
+# Converting list to data frame while retaining item names and combining to one data frame
 statistics_glmer = as.data.frame(do.call(rbind, all_models_glmer_results))
 statistics_glm = as.data.frame(do.call(rbind, all_models_glm_results))
 
 df = rbind(statistics_glmer, statistics_glm)
+
+
+# Converting row names to formula column and 
+df$formula = rownames(df)
+rownames(df) = NULL
 
 
 # Set significant level (alpha). Calculate confidence intervals (CI)
@@ -213,10 +219,12 @@ df$estimate_oddsratio = with(df, exp(estimate))
 df$ci_lower_oddsratio = with(df, exp(ci_lower))
 df$ci_upper_oddsratio = with(df, exp(ci_upper))
 
+write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
+
 
 #............................................# Rain cloud plot #...........................................#
 
-df %>%
+rain_cloud_plot = df %>%
   
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   
@@ -247,3 +255,5 @@ df %>%
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank(),
         axis.text.y = element_blank())
+
+# ggsave(here::here("figures", "rain_cloud_plot.png"), rain_cloud_plot, width = 10, height = 6)
