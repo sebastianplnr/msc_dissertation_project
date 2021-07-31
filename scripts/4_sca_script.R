@@ -293,7 +293,7 @@ impact_coef = data.frame(impact_summary$coefficients)[c(-1), 1]
 impact_se = data.frame(impact_summary$coefficients)[c(-1), 2]
 impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), 4]
 
-impact_names = c("Position", "Height", "Weight", "League country", "Age", "Goals", "Club", "Ref country", "Ref", "Victories", "Cards received", "Player", "Cards assigned", "Ties", "Games")
+impact_names = c("Position", "Height", "Weight", "Lg. country", "Age", "Goals", "Club", "Ref country", "Ref", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
 impact_df = data.frame(cbind(impact_names,
                              impact_coef,
                              impact_se,
@@ -337,8 +337,8 @@ covariate_effects = impact_df %>%
         legend.text = element_text(size = 11),
         legend.direction = "vertical",
         legend.title = element_blank(),
-        legend.margin = margin(l = 0.1, b = -0.75, unit = "cm"),
-        legend.box.margin = margin(l = 0.1, b = -0.75, unit = "cm"),
+        legend.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
+        legend.box.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
         plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(face = "italic"))
 
