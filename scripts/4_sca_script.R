@@ -3,7 +3,7 @@
 rm(list = ls())
 
 
-#................................# Set parameters #..................................#
+#...............................................# Set parameters #..............................................#
 
 # This script can be run in its entirety to reproduce the specification curve analysis for one population at a time. 
 # Please read the comments in this section to understand what each parameter does.
@@ -128,7 +128,7 @@ all_models = apply(specifications[ , (length(dv) + length(base_var) + 1):ncol(sp
                    function(x) paste(c(base_model, co_var[x]), collapse = " + ")) # create formulas
 
 
-# adding the formulas are a dedicated columns to the specification data frame
+# Adding the formulas are a dedicated columns to the specification data frame
 specifications$formula = all_models 
 
 
@@ -177,7 +177,7 @@ num_cores = detectCores() - 2 # Not using all cores due to working memory limita
 
 
 # Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time.
-# Calling summary to reduce the object size and save storage. Wrap model call within the above-define function.
+# Calling summary to generate a homogeneous outcome structure which needed for subsetting. Wrap model call within the above-define function.
 all_models_glmer_results = mclapply(ranef_sample,
                                     mc.cores = num_cores,
                                     function(x) extract_statistics(summary(glmer(x, data = dat, family = "binomial", nAGQ = 0)), "skin_tone_num"))
@@ -208,7 +208,7 @@ rownames(df) = NULL
 alpha_level = 0.05
 z = 1.96 # 95% CI
 
-df$below_alpha = with(df, ifelse(p_value < alpha_level, TRUE, FALSE))
+df$below_alpha = with(df, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
 
 df$ci_lower = with(df, estimate - z*se)
 df$ci_upper = with(df, estimate + z*se)
@@ -224,36 +224,124 @@ write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
 
 #............................................# Rain cloud plot #...........................................#
 
-rain_cloud_plot = df %>%
+vibration_of_effect = df %>%
+  
+  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 1.5) %>% 
   
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   
   geom_flat_violin(aes(fill = ""),
-                   position = position_nudge(x = 0.1, y = 0),
-                   adjust = 1.5,
                    trim = FALSE,
-                   alpha = 0.5, colour = NA) +
+                   colour = "dark grey", 
+                   fill = "dark grey") +
   
-  geom_point(aes(x = 0.6, # preventing the points from overlapping with the box plot
-                 y = estimate_oddsratio,
-                 colour = below_alpha),
-             position = position_jitter(width = .03, seed = 123), size = 1, shape = 20) +
+  geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
+             position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.6, stroke = 0) +
   
-  geom_boxplot(aes(x = 0.851,
-                   y = estimate_oddsratio),
-               alpha = 0.5,
-               width = 0.1,
-               colour = "black") +
+  geom_boxplot(aes(x = 0.81, y = estimate_oddsratio),
+               alpha = 0.5, width = 0.1, colour = "black") +
   
-  geom_hline(yintercept = 1.31, 
-             linetype = "dashed", 
-             color = "black") +
+  geom_hline(yintercept = 1.31, linetype = "dashed", color = "black") +
   
-  coord_flip() + theme_classic() + labs(y = "Skin tone odds ratio") +
+  annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color="black") +
   
-  theme(legend.position = "none",
+  scale_color_manual(values = c("red", "black")) +
+  
+  scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(1, 1.5), expand = c(0, 0)) +
+  
+  labs(title = "Vibration of effect due to covariate specification",
+       subtitle = "Odds ratio (OR), n = 200") +
+  
+  coord_flip() + theme_classic() +
+  
+  theme(axis.line.y = element_blank(),
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank(),
-        axis.text.y = element_blank())
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.title.align = 1,
+        legend.text = element_text(size = 11),
+        legend.direction = "vertical",
+        legend.title = element_blank(),
+        legend.margin = margin(b = -0.735, unit = "cm"),
+        legend.box.margin = margin(b = -0.735, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic")) +
+  
+  guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
 
-# ggsave(here::here("figures", "rain_cloud_plot.png"), rain_cloud_plot, width = 10, height = 6)
+vibration_of_effect
+
+ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, width = 11, height = 5)
+
+
+########
+
+analysed_specifications = inner_join(specifications, df, by = "formula")
+analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 2 & estimate_oddsratio <= 1.5) # Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
+analysed_specifications = analysed_specifications[, c(2:19, 28)]
+
+colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "estimate_oddsratio")
+
+impact_mod = lm(estimate_oddsratio ~ factor(specific_pos) + factor(height_cm) + factor(weight_kg) + factor(league_country) + factor(age_yrs) + factor(goals) + factor(club) + factor(ref_country) + factor(ref) + factor(victories) + factor(player_cards_received) + factor(player) + factor(ref_cards_assigned) + factor(ties) + factor(games),
+                data = analysed_specifications)
+impact_summary = summary(impact_mod)
+
+impact_coef = data.frame(impact_summary$coefficients)[c(-1), 1]
+impact_se = data.frame(impact_summary$coefficients)[c(-1), 2]
+impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), 4]
+
+impact_names = c("Position", "Height", "Weight", "League country", "Age", "Goals", "Club", "Ref country", "Ref", "Victories", "Cards received", "Player", "Cards assigned", "Ties", "Games")
+impact_df = data.frame(cbind(impact_names,
+                             impact_coef,
+                             impact_se,
+                             impact_pvalue))
+
+impact_df$ci_lower = with(impact_df, as.numeric(impact_coef) - z*as.numeric(impact_se))
+impact_df$ci_upper = with(impact_df, as.numeric(impact_coef) + z*as.numeric(impact_se))
+
+impact_df$estimate_oddsratio = with(impact_df, round(exp(as.numeric(impact_coef)), digits = 5))
+impact_df$ci_lower_oddsratio = with(impact_df, exp(ci_lower))
+impact_df$ci_upper_oddsratio = with(impact_df, exp(ci_upper))
+
+impact_df$below_alpha = with(impact_df, ifelse(as.numeric(impact_pvalue) < 0.05, "Significant", "Non-significant"))
+
+
+covariate_effects = impact_df %>%
+  
+  ggplot(aes(x = reorder(x = impact_names, X = estimate_oddsratio), estimate_oddsratio)) +
+  
+  geom_point(aes(color = below_alpha)) +
+  
+  geom_hline(yintercept = 1) +
+  
+  geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
+  
+  scale_color_manual(values = c("black", "red")) +
+  
+  scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
+  
+  labs(title = "Specified effect of covatiates",
+       subtitle = "Odds ratio (OR), n = 200",
+       x = "Covariate") +
+  
+  theme_classic() +
+  
+  theme(panel.grid.major.y = element_line(colour = "grey"),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.title.align = 1,
+        legend.text = element_text(size = 11),
+        legend.direction = "vertical",
+        legend.title = element_blank(),
+        legend.margin = margin(l = 0.1, b = -0.75, unit = "cm"),
+        legend.box.margin = margin(l = 0.1, b = -0.75, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic"))
+
+covariate_effects
+
+ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width = 11, height = 5)
