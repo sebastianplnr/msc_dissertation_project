@@ -53,9 +53,16 @@ dat_models = data.frame(fread(here::here("data", "4_model_outcome_data.csv")))
 dat_covariates = data.frame(fread(here::here("data", "4_covariate_effect_data.csv")))
 
 
+# Adjusting class for proper visualisation
+dat_models$below_alpha = factor(dat_models$below_alpha)
+
+dat_covariates$impact_names = factor(dat_covariates$impact_names)
+dat_covariates$below_alpha = factor(dat_covariates$below_alpha)
+
+
 #............................................# Rain cloud plot #...........................................#
 
-vibration_of_effect = df %>%
+vibration_of_effect = dat_models %>%
   
   filter(estimate_oddsratio > 0 & estimate_oddsratio <= 1.5) %>% 
   
@@ -105,7 +112,7 @@ ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, wi
 
 #.........................................# Covariate Effects plot #.......................................#
 
-covariate_effects = impact_df %>%
+covariate_effects = dat_covariates %>%
   
   ggplot(aes(x = reorder(x = impact_names, X = estimate_oddsratio), estimate_oddsratio)) +
   

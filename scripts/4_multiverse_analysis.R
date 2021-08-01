@@ -219,56 +219,6 @@ df$ci_upper_oddsratio = with(df, exp(ci_upper))
 write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
 
 
-#............................................# Rain cloud plot #...........................................#
-
-vibration_of_effect = df %>%
-  
-  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 1.5) %>% 
-  
-  ggplot(aes(x = "", y = estimate_oddsratio)) +
-  
-  geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
-  
-  geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
-             position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.6, stroke = 0) +
-  
-  geom_boxplot(aes(x = 0.81, y = estimate_oddsratio), alpha = 0.5, width = 0.1, colour = "black") +
-  
-  geom_hline(yintercept = 1.31, linetype = "dashed", color = "black") +
-  
-  annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color="black") +
-  
-  scale_color_manual(values = c("red", "black")) +
-  
-  scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(1, 1.5), expand = c(0, 0)) +
-  
-  labs(title = "Vibration of effect due to covariate specification", subtitle = "Odds ratio (OR), n = 200") +
-  
-  coord_flip() + theme_classic() +
-  
-  theme(axis.line.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
-        legend.position = "top",
-        legend.justification = "left",
-        legend.title.align = 1,
-        legend.text = element_text(size = 11),
-        legend.direction = "vertical",
-        legend.title = element_blank(),
-        legend.margin = margin(b = -0.735, unit = "cm"),
-        legend.box.margin = margin(b = -0.735, unit = "cm"),
-        plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(face = "italic")) +
-  
-  guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
-
-vibration_of_effect
-
-ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, width = 11, height = 5)
-
-
 #............................................# Covariates effects #.........................................#
 
 # Build data frame that includes the specifications and the analysis results
@@ -306,41 +256,3 @@ impact_df$ci_upper_oddsratio = with(impact_df, exp(ci_upper))
 impact_df$below_alpha = with(impact_df, ifelse(as.numeric(impact_pvalue) < 0.05, "Significant", "Non-significant"))
 
 write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.names = FALSE)
-
-
-# Visualise the specified effect of covariates
-covariate_effects = impact_df %>%
-  
-  ggplot(aes(x = reorder(x = impact_names, X = estimate_oddsratio), estimate_oddsratio)) +
-  
-  geom_point(aes(color = below_alpha)) +
-  
-  geom_hline(yintercept = 1) +
-  
-  geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
-  
-  scale_color_manual(values = c("black", "red")) +
-  
-  scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
-  
-  labs(title = "Specified effect of covatiates", subtitle = "Odds ratio (OR), n = 200", x = "Covariate") +
-  
-  theme_classic() +
-  
-  theme(panel.grid.major.y = element_line(colour = "grey"),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
-        legend.position = "top",
-        legend.justification = "left",
-        legend.title.align = 1,
-        legend.text = element_text(size = 11),
-        legend.direction = "vertical",
-        legend.title = element_blank(),
-        legend.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
-        legend.box.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
-        plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(face = "italic"))
-
-covariate_effects
-
-ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width = 11, height = 5)
