@@ -35,7 +35,7 @@ if(!is.null(sessionInfo()$otherPkgs)) {
 
 # Download and install missing packages
 requiredPackages = c(# "psych", "plotrix", "rstudioapi", "DescTools", # packages needed?
-                     "here", "data.table", "tidyverse", "lme4", "parallel", "PupillometryR")
+                     "here", "data.table", "tidyverse", "lme4", "parallel", "PupillometryR", "cowplot")
 
 missingPackages = requiredPackages[!requiredPackages %in% installed.packages()[ , "Package"]]
 
@@ -224,9 +224,10 @@ write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
 # Build data frame that includes the specifications and the analysis results
 analysed_specifications = inner_join(specifications, df, by = "formula")
 analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 2 & estimate_oddsratio <= 1.5) # Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
-analysed_specifications = analysed_specifications[ , c(2:19, 28)] # select variable of interest i.e., covariates and dv
+analysed_specifications = analysed_specifications[ , c(2:19, 24:25, 28:ncol(analysed_specifications))] # select variable of interest i.e., covariates and dv
+analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
 
-colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "estimate_oddsratio")
+colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")
 
 
 # Run linear model to get the specified effects of each covariate (included yes/no)
