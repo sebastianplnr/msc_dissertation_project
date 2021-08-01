@@ -1,6 +1,8 @@
 ---
-title: "__How analysis strategy affects analysis results__"
-subtitle: "Vibration of effects due to model specifications"
+title: |
+  | __Assessing the median effect robustness in__
+  | __@silberzahn2018 through model specification__
+subtitle: "How analysis strategy affects analysis results"
 author: "Sebastian Ploner, sploner1@sheffield.ac.uk, University of Sheffield"
 linestretch: 1.5
 output: pdf_document
@@ -16,19 +18,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 # Introduction
+     The Covid-19 pandemic has reaffirmed the need for rigours scientific research to inform decision-making on a scientific and societal level. However, particularly the social sciences have a history of inflated positive findings (Ionanidis) leading to the reproducibility crisis [@pashler2012]. @simmons2011 demonstrated how the so-called *researcher degree of freedom* affect study results. This concept refers to the analytical choices researchers make and their induced variation in results. For instance, sample size can be highly deterministic of finding statistically significant effects. @john2012 found 70% of researchers have at least once stopped their data collection based on a preliminary analysis. P-value simulations as a function of sample size showed an increased likelihood of obtaining false-positives for small sample sizes. Specifically, a sample size of ten had a 22.1% chance of being a false positive. Adding 20 observations per condition decreased the probability to 12.7% [@simmons2011]. The authors did not insinuate any malicious intent per-se, but rather attributed the issue to an ambiguity of a "right way" to analyse data, and needing statistically significant results to publish. To prevent such bad practices the authors suggest requirements and guidelines for authors and reviewers, respectively.
 
-
-@silberzahn2018 investigated the effects of analytical choices on results. Specifically, they had 29 teams of researchers investigate the same research question with the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect, and the odds-ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for prior believes, experience and peer rated analysis quality, none of them accounted for the variation of results.
+     @silberzahn2018 investigated the effects of analytical choices on results. Specifically, they had 29 teams of researchers investigate the same research question with the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect, and the odds-ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for prior believes, experience and peer rated analysis quality, none of them accounted for the variation of results.
 
 This study puts (psychological) research in a delicate position, because if researchers with honest intentions come to such drastically different conclusions despite starting off on the identical dataset what does this mean for the rest of studies? 
 
-The Covid-19 pandemic has reaffirmed the need for rigorous scientific research, but the process is not straightforward. In fact, Ioannidis 2005 argued that most study findings are false positives due to flawed study designs and insufficient sample sizes. 
 
-@silberzahn2018
 
 @patel2015
 
-@haessler2020
 
 # Methods
 
