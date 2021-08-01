@@ -63,30 +63,19 @@ dat_covariates$below_alpha = factor(dat_covariates$below_alpha)
 #............................................# Rain cloud plot #...........................................#
 
 vibration_of_effect = dat_models %>%
-  
   filter(estimate_oddsratio > 0 & estimate_oddsratio <= 1.5) %>% 
-  
   ggplot(aes(x = "", y = estimate_oddsratio)) +
-  
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
-  
   geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
              position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.6, stroke = 0) +
-  
   geom_boxplot(aes(x = 0.81, y = estimate_oddsratio), alpha = 0.5, width = 0.1, colour = "black") +
-  
   geom_hline(yintercept = 1.31, linetype = "dashed", color = "black") +
-  
   annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
-  
   scale_color_manual(values = c("red", "black")) +
-  
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(1, 1.5), expand = c(0, 0)) +
-  
-  labs(title = "Vibration of effect due to covariate specification", subtitle = "Odds ratio (OR), n = 200") +
-  
-  coord_flip() + theme_classic() +
-  
+  labs(title = "Vibration of effect due to covariate specification", subtitle = "Odds ratio (OR), N = 200") +
+  coord_flip() +
+  theme_classic() +
   theme(axis.line.y = element_blank(),
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank(),
@@ -98,11 +87,10 @@ vibration_of_effect = dat_models %>%
         legend.text = element_text(size = 11),
         legend.direction = "vertical",
         legend.title = element_blank(),
-        legend.margin = margin(b = -0.735, unit = "cm"),
-        legend.box.margin = margin(b = -0.735, unit = "cm"),
+        legend.margin = margin(b = -0.73, unit = "cm"),
+        legend.box.margin = margin(b = -0.73, unit = "cm"),
         plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(face = "italic")) +
-  
   guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
 
 vibration_of_effect
@@ -113,23 +101,14 @@ ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, wi
 #.........................................# Covariate Effects plot #.......................................#
 
 covariate_effects = dat_covariates %>%
-  
   ggplot(aes(x = reorder(x = impact_names, X = estimate_oddsratio), estimate_oddsratio)) +
-  
   geom_point(aes(color = below_alpha)) +
-  
   geom_hline(yintercept = 1) +
-  
   geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
-  
   scale_color_manual(values = c("black", "red")) +
-  
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
-  
-  labs(title = "Specified effect of covatiates", subtitle = "Odds ratio (OR), n = 200", x = "Covariate") +
-  
+  labs(title = "Specified effect of covatiates", subtitle = "N = 200, 95% CI", x = "Covariate") +
   theme_classic() +
-  
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),
         plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
@@ -149,7 +128,7 @@ covariate_effects
 ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width = 11, height = 5)
 
 
-#.........................................# SCA plot #.......................................#
+#................................................# SCA plot #..............................................#
 
 analysed_specifications = analysed_specifications[order(analysed_specifications$estimate_oddsratio), ] # order by odds ratio, low to high
 analysed_specifications$id = factor(seq(1:nrow(analysed_specifications))) # assign identifier
@@ -174,16 +153,18 @@ long_df$covariate = factor(long_df$covariate,
 top = analysed_specifications %>% 
   filter(id != "1") %>% 
   ggplot(aes(id, estimate_oddsratio)) +
-  geom_point(aes(colour = below_alpha)) +
+  geom_point(aes(colour = below_alpha), size = 1) +
   geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
+  geom_hline(yintercept = 1, color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.9, 1.7), expand = c(0, 0)) +
-  labs(title = "Results of the specification-curve analysis", subtitle = "Number of specifications = 200") +
+  labs(title = "Results of the specification-curve analysis", subtitle = "N = 200, 95% CI") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank(),
+        axis.line.x = element_blank(),
         legend.position = "top",
         legend.title.align = 1,
         legend.text = element_text(size = 11),
@@ -201,7 +182,7 @@ bottom = long_df %>%
   ggplot(aes(x = id, y = covariate)) +
   geom_tile(width = 0.5, height = 0.5, color = "white") +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
-  scale_y_discrete(name = "Covariates", expand = c(0, 0), limits = rev) +
+  scale_y_discrete(name = "Covariates", expand = c(0.03, 0), limits = rev) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.line.y = element_blank(),

@@ -22,11 +22,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
      Among these requirements and guidelines are a minimum sample size, reporting all collected variables and presenting results with and without covariates [@simmons2011]. While these are certainly worthwhile suggestions they still struggle to cope with the full spectrum of the analytical possibilities. @silberzahn2018 investigated precisely the effects of analytical choices on results. Specifically, they had 29 teams of researchers investigate the same research question with the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect, and the odds ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for prior believes, experience and peer rated analysis quality, none of them accounted for the variation of results. Similar studies support these *researcher degrees of freedom* effects [@botvinik-nezer2020]. 
 
-     @silberzahn2018 and @botvinik-nezer2020 suggest using multiverse analysis strategies (also known as specification-curve analysis) to get a more accurate representation of the results space. This analytical strategy refers to conducting analyses for all "reasonable specifications" (or at least a large sample thereof). "Reasonably" is defined as statistically valid tests, scrutinising the research question and non-redundant[@simonsohn2020].
+     @silberzahn2018 and @botvinik-nezer2020 suggest using multiverse analysis strategies (also known as specification-curve analysis) to get a more accurate representation of the results space. This analytical strategy refers to conducting analyses for all "reasonable specifications" (or at least a large sample thereof). "Reasonably" is defined as statistically valid tests, scrutinising the research question and non-redundant [@simonsohn2020]. The idea is to simulate a 
+Vibration of effect @patel2015
+
+     
+The present study will build upon @silberzahn2018, @botvinik-nezer2020 and @patel2015. It has been established that results vary and 
 
 
 
-@patel2015
 
 
 # Methods
