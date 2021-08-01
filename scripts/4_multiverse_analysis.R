@@ -48,9 +48,6 @@ if(length(missingPackages)) {
 invisible(lapply(requiredPackages, require, character.only = TRUE))
 
 
-# Source script containing functions required to run the master script
-# source(here("scripts", "my_functions.R"))
-
 # Load data
 dat = data.frame(fread(here::here("data", "3_prepared_data.csv")))
 
@@ -281,10 +278,12 @@ analysed_specifications = analysed_specifications[ , c(2:19, 28)] # select varia
 
 colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "estimate_oddsratio")
 
+
 # Run linear model to get the specified effects of each covariate (included yes/no)
 impact_mod = lm(estimate_oddsratio ~ factor(specific_pos) + factor(height_cm) + factor(weight_kg) + factor(league_country) + factor(age_yrs) + factor(goals) + factor(club) + factor(ref_country) + factor(ref) + factor(victories) + factor(player_cards_received) + factor(player) + factor(ref_cards_assigned) + factor(ties) + factor(games),
                 data = analysed_specifications)
 impact_summary = summary(impact_mod)
+
 
 # Extract data from model and save as data frame
 impact_coef = data.frame(impact_summary$coefficients)[c(-1), 1]
@@ -305,6 +304,9 @@ impact_df$ci_lower_oddsratio = with(impact_df, exp(ci_lower))
 impact_df$ci_upper_oddsratio = with(impact_df, exp(ci_upper))
 
 impact_df$below_alpha = with(impact_df, ifelse(as.numeric(impact_pvalue) < 0.05, "Significant", "Non-significant"))
+
+write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.names = FALSE)
+
 
 # Visualise the specified effect of covariates
 covariate_effects = impact_df %>%
