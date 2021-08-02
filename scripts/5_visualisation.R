@@ -105,8 +105,8 @@ covariate_effects = dat_covariates %>%
   geom_point(aes(color = below_alpha)) +
   geom_hline(yintercept = 1) +
   geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
-  scale_color_manual(values = c("black", "red")) +
-  scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
+  scale_color_manual(values = c("red", "black")) +
+  scale_y_continuous(name = "Odds ratio\n", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
   labs(title = "Specified effect of covatiates", subtitle = "N = 200, 95% CI", x = "Covariate") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
@@ -121,7 +121,8 @@ covariate_effects = dat_covariates %>%
         legend.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
         legend.box.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
         plot.title = element_text(face = "bold"),
-        plot.subtitle = element_text(face = "italic"))
+        plot.subtitle = element_text(face = "italic")) +
+  guides(colour = guide_legend(reverse = TRUE))
 
 covariate_effects
 
@@ -133,7 +134,7 @@ ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width 
 analysed_specifications = analysed_specifications[order(analysed_specifications$estimate_oddsratio), ] # order by odds ratio, low to high
 analysed_specifications$id = factor(seq(1:nrow(analysed_specifications))) # assign identifier
 
-# Preparing specification matrix i.e., the bottom part of the sca plot
+# Preparing specification matrix i.e., the bottom part of the SCA plot
 prepare_long_df = analysed_specifications[ , c(4:18, 21, 24)] # Subset covariates and statistics
 prepare_long_df[prepare_long_df == FALSE] = NA # FALSE ro NA to better subset
 long_df = melt(setDT(prepare_long_df), id.vars = c("id"), variable.name = "estimate_oddsratio") # Wide to long format
@@ -165,6 +166,7 @@ top = analysed_specifications %>%
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank(),
         axis.line.x = element_blank(),
+        plot.margin = unit(c(0.5, 1, 0, 1), "cm"),
         legend.position = "top",
         legend.title.align = 1,
         legend.text = element_text(size = 11),
@@ -182,12 +184,13 @@ bottom = long_df %>%
   ggplot(aes(x = id, y = covariate)) +
   geom_tile(width = 0.5, height = 0.5, color = "white") +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
-  scale_y_discrete(name = "Covariates", expand = c(0.03, 0), limits = rev) +
+  scale_y_discrete(name = "Covariates", expand = c(0.03, 0)) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.line.y = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.text.x = element_blank())
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0, 1, 0.5, 1), "cm"),)
 
 sca_plot = plot_grid(top, bottom, ncol = 1, align = "v")
 
