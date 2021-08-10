@@ -1,8 +1,3 @@
-# WARNING: The following line of code will remove all objects from the workspace. 
-#          Please consider saving your workspace.
-rm(list = ls())
-
-
 #...............................................# Set parameters #..............................................#
 
 # This script can be run in its entirety to reproduce the specification curve analysis for one population at a time. 
@@ -63,17 +58,17 @@ dat_covariates$below_alpha = factor(dat_covariates$below_alpha)
 #............................................# Rain cloud plot #...........................................#
 
 vibration_of_effect = dat_models %>%
-  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 1.5) %>% 
+  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 4) %>% 
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
   geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
-             position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.6, stroke = 0) +
+             position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.5, stroke = 0) +
   geom_boxplot(aes(x = 0.81, y = estimate_oddsratio), alpha = 0.5, width = 0.1, colour = "black") +
   geom_hline(yintercept = 1.31, linetype = "dashed", color = "black") +
   annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(1, 1.5), expand = c(0, 0)) +
-  labs(title = "Vibration of effect due to covariate specification", subtitle = "Odds ratio (OR), N = 200") +
+  labs(title = "Vibration of effect due to covariate specification", subtitle = "N = 1,000; Odds ratio (OR)") +
   coord_flip() +
   theme_classic() +
   theme(axis.line.y = element_blank(),
@@ -100,14 +95,16 @@ ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, wi
 
 #.........................................# Covariate Effects plot #.......................................#
 
+dat_covariates = dat_covariates[order(dat_covariates$estimate_oddsratio), ]
+
 covariate_effects = dat_covariates %>%
-  ggplot(aes(x = reorder(x = impact_names, X = estimate_oddsratio), estimate_oddsratio)) +
+  ggplot(aes(x = reorder(x = impact_names, X = impact_coef), impact_coef)) +
   geom_point(aes(color = below_alpha)) +
-  geom_hline(yintercept = 1) +
-  geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
+  geom_hline(yintercept = 0) +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
   scale_color_manual(values = c("red", "black")) +
-  scale_y_continuous(name = "Odds ratio\n", breaks = c(seq(0.85, 1.1, 0.05)), limits = c(0.85, 1.1)) +
-  labs(title = "Specified effect of covatiates", subtitle = "N = 200, 95% CI", x = "Covariate") +
+  scale_y_continuous(name = "Estimates\n", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
+  labs(title = "Specified effect of covatiates", subtitle = "N = 1,000; 95% CI", x = "Covariate") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -135,13 +132,13 @@ analysed_specifications = analysed_specifications[order(analysed_specifications$
 analysed_specifications$id = factor(seq(1:nrow(analysed_specifications))) # assign identifier
 
 # Preparing specification matrix i.e., the bottom part of the SCA plot
-prepare_long_df = analysed_specifications[ , c(4:18, 21, 24)] # Subset covariates and statistics
+prepare_long_df = analysed_specifications[ , c(4:18, 20, 21, 24)] # Subset covariates and statistics
 prepare_long_df[prepare_long_df == FALSE] = NA # FALSE ro NA to better subset
-long_df = melt(setDT(prepare_long_df), id.vars = c("id"), variable.name = "estimate_oddsratio") # Wide to long format
+long_df = melt(setDT(prepare_long_df), id.vars = c("id", "below_alpha"), variable.name = c("estimate_oddsratio")) # Wide to long format
 long_df = long_df[complete.cases(long_df), ] # Exclude NA cases
 long_df = long_df[!grepl("estimate_oddsratio", long_df$estimate_oddsratio), ] # Exclude outcome variable
-colnames(long_df) = c("id", "covariate", "x")
-long_df = long_df[ , c("id", "covariate")] # Exclude value column
+colnames(long_df) = c("id", "below_alpha", "covariate", "x")
+long_df = long_df[ , c("id", "below_alpha", "covariate")] # Exclude value column
 
 impact_df = impact_df[order(impact_df$estimate_oddsratio), ] # order covariate effects low to high
 
@@ -153,14 +150,14 @@ long_df$covariate = factor(long_df$covariate,
 # build plot
 top = analysed_specifications %>% 
   filter(id != "1") %>% 
-  ggplot(aes(id, estimate_oddsratio)) +
-  geom_point(aes(colour = below_alpha), size = 1) +
-  geom_errorbar(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio, color = below_alpha), width = 0.1) +
+  ggplot(aes(as.numeric(id), estimate_oddsratio)) +
+  geom_point(aes(colour = below_alpha), size = 1, alpha = 0.5) +
+  geom_ribbon(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio), alpha = 0.3) +
   geom_hline(yintercept = 1, color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.9, 1.7), expand = c(0, 0)) +
-  labs(title = "Results of the specification-curve analysis", subtitle = "N = 200, 95% CI") +
+  labs(title = "Results of the specification-curve analysis", subtitle = "N = 1,000; 95% CI") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
@@ -176,22 +173,52 @@ top = analysed_specifications %>%
         legend.box.margin = margin(t = -0.5, b = -0.2, unit = "cm"),
         plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(face = "italic", margin = margin(0, 0, 20, 0))) +
-  guides(colour = guide_legend(reverse = TRUE))
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
 
 
 bottom = long_df %>% 
   filter(id != "1") %>%
   ggplot(aes(x = id, y = covariate)) +
-  geom_tile(width = 0.5, height = 0.5, color = "white") +
+  geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
+  scale_fill_manual(values = c("red", "black")) +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
   scale_y_discrete(name = "Covariates", expand = c(0.03, 0)) +
   theme_classic() +
-  theme(axis.ticks.y = element_blank(),
+  theme(legend.position = "none", 
+        axis.ticks.y = element_blank(),
         axis.line.y = element_blank(),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank(),
         plot.margin = unit(c(0, 1, 0.5, 1), "cm"),)
 
 sca_plot = plot_grid(top, bottom, ncol = 1, align = "v")
+sca_plot
 
 ggsave(here::here("figures", "sca_plot.png"), sca_plot, width = 10, height = 6)
+
+
+###
+median_sca = median(analysed_specifications$estimate_oddsratio)
+median_silberzahn = 1.31
+
+ecdf_calculate = ecdf(analysed_specifications$estimate_oddsratio)
+
+ecdf_sca_median = ecdf_calculate(median_sca)
+ecdf_silberzahn_median = ecdf_calculate(ecdf_calculate)
+
+
+analysed_specifications %>%
+  filter(estimate_oddsratio < 4) %>% 
+  ggplot(aes(estimate_oddsratio)) +
+  stat_ecdf(geom = "smooth", pad = FALSE, colour = "black") +
+  
+  geom_segment(aes(x = median_silberzahn, y = 0, xend = median_silberzahn, yend = ecdf_silberzahn_median), color = "red") +
+  geom_segment(aes(x = 1, y = ecdf_silberzahn_median, xend = median_silberzahn, yend = ecdf_silberzahn_median), color = "red") +
+  
+  geom_segment(aes(x = median_sca, y = 0, xend = median_sca, yend = ecdf_sca_median), color = "red") +
+  geom_segment(aes(x = 1, y = ecdf_sca_median, xend = median_sca, yend = ecdf_sca_median), color = "red") +
+  
+  scale_x_continuous(name = "Odds ratio", breaks = c(seq(1, 1.4, 0.05)), limits = c(1, 1.4), expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_classic() +
+  theme(panel.grid.major = element_line(colour = "light grey"))

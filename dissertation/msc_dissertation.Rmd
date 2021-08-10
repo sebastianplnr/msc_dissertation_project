@@ -1,30 +1,215 @@
 ---
 title: |
-  | __Assessing the median effect robustness in__
-  | __@silberzahn2018 through model specification__
-subtitle: "How analysis strategy affects analysis results"
+  | __How analysis strategy affects analysis results__
+subtitle: |
+  | *Assessing the median effect robustness in @silberzahn2018 through model specification*
+  |
+  | Master's thesis - DRAFT
 author: "Sebastian Ploner, sploner1@sheffield.ac.uk, University of Sheffield"
 linestretch: 1.5
-output: pdf_document
+output:
+    pdf_document:
+        includes:
+            in_header: header.tex
+        extra_dependencies: ["flafter"]
 bibliography: references.bib
 csl: apa.csl
+header-includes:
+  - \usepackage[ruled,vlined]{algorithm2e}
 ---
 
 ```{r setup, include = FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
 
+#...............................................# Set parameters #..............................................#
+
+# This script can be run in its entirety to reproduce the specification curve analysis for one population at a time. 
+# Please read the comments in this section to understand what each parameter does.
+# After setting the parameters for the first time, we recommend reading the WARNINGS on lines 1 and 56 before
+# sourcing the entire script or running the "Prepare R Session" section.
+
+#... Set seed for random number generation
+set.seed(999999) # set to 999999 to reproduce the results reported in the paper
+
+
+#...........................................# Prepare R Session #...............................................#
+
+# WARNING: All currently loaded packages will be detached and packages needed 
+#          to run this script will be loaded. 
+#          Missing packages will be downloaded and installed.
+#          Also, the working directory will be automatically set to the location of this script.
+#          If you did not alter the structure of the folder containing this script and the data,
+#          in most cases you should be able to run this script without any manual adjustments 
+#          in a current version of RStudio (tested in RStudio Version 1.1.453 and newer releases running 
+#          R Version 3.5.1 and newer releases).
+
+
+# Detach packages
+if(!is.null(sessionInfo()$otherPkgs)) {
+  invisible(lapply(paste("package:", names(sessionInfo()$otherPkgs), sep = ""), 
+                   detach, character.only = TRUE, unload = TRUE))
+}
+
+
+# Download and install missing packages
+requiredPackages = c("here", "data.table", "tidyverse", "PupillometryR", "cowplot", "knitr", "kableExtra", "papeR", "DiagrammeR")
+
+missingPackages = requiredPackages[!requiredPackages %in% installed.packages()[ , "Package"]]
+
+if(length(missingPackages)) {
+  install.packages(missingPackages)
+}
+
+
+# Load required packages
+invisible(lapply(requiredPackages, require, character.only = TRUE))
+
+
+# Load data
+dat = data.frame(fread(here::here("data", "3_prepared_data.csv")))
+
 ```
+
+```{=latex}
+
+% Trigger ToC creation in LaTeX
+\renewcommand{\baselinestretch}{1.5}\normalsize
+\tableofcontents
+\renewcommand{\baselinestretch}{1.5}\normalsize
+
+```
+
+... \newline
+*Abstract--in progress.* \newline
+... \newline
+
+
+\newpage
 
 
 # Introduction
-     The Covid-19 pandemic has reaffirmed the need for rigours scientific research to inform decision-making on a scientific and societal level. However, particularly the social sciences have a history of inflated positive findings (Ionanidis) leading to the reproducibility crisis [@pashler2012]. @simmons2011 demonstrated how the so-called *researcher degree of freedom* (RDF) affect study results. This concept refers to the analytical choices researchers make and their induced variation in results. For instance, sample size can be highly deterministic of finding statistically significant effects. @john2012 found 70% of researchers have at least once stopped their data collection based on a preliminary analysis. P-value simulations as a function of sample size showed an increased likelihood of obtaining false-positives for small sample sizes. Specifically, a sample size of ten had a 22.1% chance of being a false positive. Adding 20 observations per condition decreased the probability to 12.7% [@simmons2011]. The authors did not insinuate any malicious intent per-se, but rather attributed the issue to an ambiguity of a "right way" to analyse data, and needing statistically significant results to publish. This example shows how easy it is to engineer statistically significant effects. To prevent such bad practices @simmons2011 suggested requirements and guidelines for authors and reviewers.
+     The Covid-19 pandemic has reaffirmed the need for rigours scientific research to inform decision-making on a scientific and societal level. However, particularly the social sciences have a history of inflated positive findings leading to the reproducibility crisis [@pashler2012]. @simmons2011 demonstrated how the so-called *researcher degree of freedom* (RDF) affect study results. This concept refers to the analytical choices researchers make and their induced variation in results. For instance, sample size can be highly deterministic of finding statistically significant effects. @john2012 found 70% of researchers have at least once stopped their data collection based on a preliminary analysis. P-value simulations as a function of sample size showed an increased likelihood of obtaining false-positives for small sample sizes. Specifically, a sample size of ten had a 22.1% chance of being a false positive. Adding 20 observations per condition decreased the probability to 12.7% [@simmons2011]. The authors did not insinuate any malicious intent per-se, but rather attributed the issue to an ambiguity of a "right way" to analyse data, and needing statistically significant effects to publish. This example shows how easy it is to engineer these statistically significant effects. To prevent such bad practices @simmons2011 suggested requirements and guidelines for authors and reviewers.
 
-     Among these requirements and guidelines are a minimum sample size, reporting all collected variables and presenting results with and without covariates [@simmons2011]. These are important suggestions, but they struggle to cope with the full spectrum of the analytical possibilities. @silberzahn2018 further scrutinised the effects of RDF. Specifically, they had 29 teams of researchers investigate the same research question based on the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect; the odds ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for prior believes, experience and peer rated analysis quality, none of them accounted for the variation of results. Similar studies support these RDF effects [@botvinik-nezer2020]. These studies show that even extended efforts do not necessarily yield conclusive results. Moreover, this crowdsourcing approach is not practical.
+     Among these requirements and guidelines are a minimum sample size, reporting all collected variables and presenting results with and without covariates [@simmons2011]. These are important suggestions but they struggle to cope with the full spectrum of the analytical possibilities. @silberzahn2018 further scrutinised the effects of RDF. Specifically, they had 29 teams of researchers investigate the effects of skin colour on the odds of being sent off the football field based on the same dataset. Other than being part of the project there was no incentive for researchers to participate i.e., there was no ulterior motive for researcher to manipulate outcomes (e.g. wanting/needing to publish). The variation between the analytic approaches was substantial. There were 29 different analyses with 21 different combinations of covariates. Twenty teams found a statistically significant effect; the odds ratios ranged from 0.89 to 2.93 (median = 1.31). The authors also controlled for researchers' prior believes and experience as well as peer rated analysis quality, none of them accounted for the variation of results. Other crowdsourced analysis projects have made similar observations [@botvinik-nezer2020]. These studies are interesting for two reasons (a) from a statistical perspective they highlight the RDF effects, and (b) from a content perspective they provide the most robust insights into the scrutinised concepts. Nonetheless, crowdsourcing approaches are impractical as they require extensive personnel (N number of researchers) and time resources (years) and are therefore often not feasible analytical strategies [@silberzahn2018].
 
-     @silberzahn2018 and @botvinik-nezer2020 suggest using multiverse analysis, or specification-curve analysis, as an alternative to crowdsourcing approaches. This approach requires a researcher, ideally a more than one, to conduct with every plausible analysis, aggregate and report it, and conduct an inferential test across all possibilities to come to a conclusion. "Plausible" refers to statistically valid tests appropriate to the research question and non-redundancy [@simonsohn2020]. This approach is statistically more complex and computationally more intense than conventional analyses, but makes inherent strategy bias and noise transparent, and forces researchers to look at the entire "garden of forking paths" [@gelman2013]. A good example of quantifying the extend of variation due to analytical choices was conducted by @patel2015. They tested the association of clinical, environmental and physiological variables with all-cause mortality. Specifically, they specified three model approaches (gaussian, cox and binomial) and 13 different covariates. Their algorithm ran every possible covariate combination (on top of the base variables) for each model which allowed the authors to assess the "vibration of effect" (VoE). They concluded that a larger VoE calls for more caution when interpreting observational associations.
+     @silberzahn2018 and @botvinik-nezer2020 suggest using multiverse analysis, or specification-curve analysis, as an alternative to crowdsourcing approaches. This approach requires a researcher, ideally a more than one, to conduct with all plausible analyses, aggregate the results and conduct an inferential test across all possibilities to come to a conclusion. "Plausible" refers to statistically valid, non-redundant, tests appropriate to the research question [@simonsohn2020]. This approach is statistically more complex and computationally more intense than conventional analyses, but makes inherent strategy bias and noise transparent, and forces researchers to look at the entire "garden of forking paths" [@gelman2013]. A good example of quantifying the extend of variation due to model specification was conducted by @patel2015. They specified three modelling approaches (gaussian, cox and binomial) and 13 covariates. Their algorithm ran every possible covariate combination for each modelling approach which allowed the authors to assess the "vibration of effect" (VoE). The VoE is another term for quantifying the extend of variation in the results. The measure allows to assess the effect's robustness. The smaller the VoE, the less the effect depends on the analytical choices and vice versa. The authors therefore called for more caution when interpreting observational associations when finding large VoE's.
 
-     Taken together, statistically effects are easy to engineer through adjusting analysis parameters like sample size. Crowdsourcing analysis is a good strategy to understand the RDF induced variation but is impractical due to its substantial personnel, time and effort requirement. Alternatives like multiverse analysis present a promising, low-personnel, but computationally intense alternative to identify RDF induced variation. The present study will build upon @silberzahn2018, @botvinik-nezer2020 and @patel2015. The objective is to conduct a multiverse analysis based on the data used in @silberzahn2018 and identify the VoE i.e., the results space of the outcome variable. This will allow for a better understanding of how robust crowdsourced identified effects are. Due to time constraints this study will function as a prove-of-concept. Specifically, it will take the analytical approach which produced the median outcome and run it with every possible covariate combination. Similarly to @patel2015 this produces a distribution of the outcome effects and its variation provides insight into the @silberzahn2018 median effect robustness. The smaller the variation, the greater is the effect's robustness.
+     Taken together, statistically significant effects are easy to engineer through adjusting analysis parameters like sample size. Crowdsourcing analysis presents a suitable strategy to understand the RDF induced variation but is impractical due to its substantial personnel and time requirements. Alternatives like multiverse analysis present a promising, low-personnel, but computationally intense alternative to identify RDF induced variation. The present research project will build upon the crowdsourcing findings of @silberzahn2018. Specifically, I will take the median analysis and rerun it with all possible covariate combinations. The objective is to define and understand the results space of the analysis i.e., assess the robustness of the median effect (VoE). Based on these insights I aim at contributing to further understanding the value, limitations and mechanisms of the multiverse approach. 
+
+
+# Analysis
+## Analysis plan
+     The project's objective is to define the results space of the @silberzahn2018 in order to draw inferences about the relationship between crowdsourcing and multiverse strategies. The results space refers to the numerical interval between the lowest and highest possible outcome. It is created by running every possible analytical strategy. @patel2015 refer to a related concept as the "Vibration of Effect" (VoE) and have developed a standardised approach to identifying this space. Essentially there are two factors: the analytical approach (i.e., the statistical model) and the covariates (or control variables). For @silberzahn2018 this means running every combination of 29 different analytical approaches and 15 different covariates used across all teams. These are $29 * 2^{15} = 950,272$ possibilities, which exceeds the scope of this research project. To get a more manageable number of possibilities of I will, therefore, focus on one analytical approach. In particular, on the approach that produced the median outcome of all analyses. The median outcome, being the middle number of any set of values, is a reasonable starting point in order to assess the VoE. Focusing on one analytical approach still leaves $1 * 2^{15} = 32,768$ possibilities. Due to computational limitations of my computer I will focus on a random sample of 1,000 thereof.
+
+     In @silberzahn2018 the median outcome was produced by @team23 which will hereinafter be referred to as *team 23* due to it's designated team number in the original study. *Team 23* first transformed the data and then conducted a mixed-model logistic regression. To recreate the identical starting point for the analyses I will, first, apply the same transformations using the scripts provided by *team 23*. (The transformation process will be described in more detain the "data" section.) Second, I will create a matrix of all possible covariate combinations whereof a random sample of 1,000 is drawn. Third, because the original study investigated the relationship between football players' skin colour and the odds of being sent off the field, there will be a set of core variables included in all models to be able answer the original research question. Following on *team 23*, I will define two interaction terms as the model's core: "skin tone *X* implicit bias" and "skin tone *X* explicit bias". (The data set's variables will be described in more detail in the "data" section.) Forth, I will combine the core variables and the randomly drawn covariates as formulas to run the models. Fifth, after running the models I will visualise the outcomes as the conventional specification curve plot as well as a rain-cloud plot [@allen2021] and scatter plot. The aim here is develop easy to understand graphs that succinctly give insight into the results. Finally, I will discuss the implications for multiverse analysis.
+
+
+## Code
+     The code is based on @haessler2020 and @patel2015. The former provided the operational backbone of the code. The latter the idea for the algorithm. R's random number generator is first fixed to be able to reproduce the outcomes. Then, all the packages are detached and only the relevant ones are loaded to prevent other functions from interfering. If the required packages are not installed, the code will do so. Next, the prepared data is loaded using the "Here" package [@here] for operating systems independence and the "data.table" package for faster importing of the data [@datatable]. (The data has been prepared by running the "disaggregate_v3.py" script of *team 23*; for more detail see the "data" section.) After having loaded the data the variables are defined as dependent, base (or core) variables and covariates. This includes defining the variables' types: numeric, factor or random effect. Next, a matrix is created established all possible combination of covariates (including base variables). Each row represents one combination, the columns represent the variables. The cells are set to TRUE or FALSE to indicate a variables presence or absence, respectively. Thus, the matrix structure looks as the following:
+
+$$\begin{bmatrix}
+\text{dv} & \text{base var}_{1} & \text{base var}_{2} & \text{base var}_{3} & \text{covar}_{1} & \text{covar}_{2} & \text{covar}_{...} & \text{covar}_{15} \\
+\text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{FALSE} & \text{FALSE} & \text{...} & \text{FALSE} \\
+\text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{FALSE} & \text{...} & \text{FALSE} \\
+\text{...} & \text{...} & \text{...} & \text{...} & \text{...} & \text{...} & \text{...} & \text{...} \\
+\text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{TRUE} & \text{...} & \text{TRUE} \\
+\end{bmatrix}$$ \newline
+
+
+     Using the *apply* function, looping over each row, the variables are pasted together thereby creating the corresponding formulas which are then saved as a vector and are appended as column to the aforementioned matrix.
+
+     *Team 23* ran a mixed-model logistic regression analysis using the "lme4" package more specifically, its "glmer" function [@lme4]. The function only works if a random structure is included in the formula. As all possible covariate combinations are explored, a random structure is not included in every formula. Therefore, before running the models, the formulas need to separated based on including a random structure or not. The random structures were defined at the beginning of the code using the following syntax: "(1|*covariate*)". Hence, this pattern is also used to identify random structures through the "grepl" function. For the non-random structure formulas the regular "glm" function is run. Both models, mixed-effect and "regular", are estimated using Maximum Likelihood estimation to ensure the outcomes are as comparable as possible. *Team 23* had also set the "nAGQ" parameter to zero (for the mixed-model) this sacrificed parameter estimation accuracy for speed. The same was done here to stay as close to the original analysis as possible. Finally, 1,000 formula samples were drawn. 75% of all formulas include at least one random structure this proportion is reflected in the sample. Furthermore, the samples are drawn without replacement i.e., every formula is unique.
+
+     Running the models yielded another challenge. Not only were the running times per model at times above 30 minutes, storing the model summaries also required significant memory. For instance, testing the code with a minimal sample of 10 (random structure) formulas yielded an analysis output larger than 400MB. This does not scale well, hence, a wrapper function was build. It's purpose was to extract the estimates, standard errors, test-statistics and p-values for the variable of interest (in this case: skin tone). This effect was substantial. The final outcome object for 1,000 models was reduced to 0.3MB(!).
+
+     The models were run using the "lapply" function more specifically, the paralellised version thereof including progress bars ("pbmcapply", @pbmcapply). Parallisation was necessary in order to reduce running time. The standard R is set to use one core, only. Parallelising the processes to six cores decreased the running time by six-fold. The results of each model iteration was appended to a list. Hence, the outcomes were two lists, one from the mixed-models, and one from the "regular" models. These lists were transformed to data frames and merged. Moreover, the p-values was coded into significant and non-significant ($\alpha = 0.05$). The odds ratios as well as their confidence intervals were calculated (the same way *team 23* did it). The resulting data frame was save as a comma-separated values (CSV) file. 
+
+\begin{algorithm}
+\caption{Pseudocode overview--in progress}
+\DontPrintSemicolon
+\SetAlgoLined
+\KwData{Prepared data based on team 23 script}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output} 
+$variables$ $\leftarrow$ Define dependent, base variables and covariates \\
+$specifications$ $\leftarrow$ Use $variables$ to create matrix containing all possible covariate combinations \\
+$formula$ $\leftarrow$ Paste $specifications$ by row and append as column to $specifications$ \\
+$formula.ranef; formula.ef$ $\leftarrow$ Separate formulas based on including a random-structure \\
+$samlple.ranef; sample.ef$ $\leftarrow$ Random, without replacement, sample from $formula.ranef; formula.ef$
+\BlankLine
+ initialization\;
+  \While{not at end of this document}{
+    read current\;
+    \eIf{understand}{
+      go to next section\;
+      current section becomes this one\;
+      }{
+      go back to the beginning of current section\;
+      }
+    }
+\KwResult{List containing model statistics}
+\end{algorithm} 
+
+
+... \newline
+*Explaining why not adjusting for multiple comparison--in progress* \newline
+... \newline
+
+
+To better understand the specified effects of the covariates I ran an ANOVA where each covariate was coded into included yes/no. The above retrieved effects where used outcome measure. The results were stored and saved as a separate data frame. As a final step the graphs were created using the "tidyverse" (specifically, "ggplot", @tidyverse), "PupillometryR" [@PupillometryR] and "cowplot" [@cowplot] packages. \newline
+
+
+... \newline
+*Explaining how the graphs were created including necessary data transformation needed--in progress.* \newline
+... \newline
+
+
+The code is written in R (Version 1.4.1103) on macOS Big Sur (Version 11.4) and can be retrieved from my [*GitHub repository*](https://github.com/sebastianplnr/msc_dissertation_project). 
+
+
+## Data origin and preparation
+Outline:
+
+* The same dataset as in @silberzahn2018 is used.
+
+* What is the data about
+
+* Data origin i.e., how did silberzahn et al. (2018) come up with the data set
+
+* how was the data processed by team 23
+
+* summary statistics of the data set
+
+```{r, echo = FALSE}
+
+# Setting variable class
+dat$player = as.factor(dat$player)
+dat$specific_pos = as.factor(dat$specific_pos)
+dat$club = as.factor(dat$club)
+dat$league_country = as.factor(dat$league_country)
+dat$ref = as.factor(dat$ref)
+dat$ref_country = as.factor(dat$ref_country)
+
+# Building a summary table
+kable(papeR::summarise(dat,
+                       type = "numeric",
+                       variables = c("height_cm", "weight_kg", "age_yrs", "games", "goals", "victories", "ties", "all_reds", "player_cards_received",
+                                     "ref_cards_assigned", "skin_tone_num", "imp_bias", "exp_bias")),
+      format = "latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+```
+
+
+\newpage
+## Outcome I: vibration of effect
+## Outcome II: specified covariate effects
+## Outcome III: specification curve
+
+
+\newpage
+# Discussion
+
 
 \newpage
 # References

@@ -1,8 +1,3 @@
-# WARNING: The following line of code will remove all objects from the workspace. 
-#          Please consider saving your workspace.
-rm(list = ls())
-
-
 #...............................................# Set parameters #..............................................#
 
 # This script can be run in its entirety to reproduce the specification curve analysis for one population at a time. 
@@ -34,8 +29,7 @@ if(!is.null(sessionInfo()$otherPkgs)) {
 
 
 # Download and install missing packages
-requiredPackages = c(# "psych", "plotrix", "rstudioapi", "DescTools", # packages needed?
-                     "here", "data.table", "tidyverse", "lme4", "parallel", "PupillometryR", "cowplot")
+requiredPackages = c("here", "data.table", "tidyverse", "lme4", "parallel", "pbmcapply", "PupillometryR", "cowplot")
 
 missingPackages = requiredPackages[!requiredPackages %in% installed.packages()[ , "Package"]]
 
@@ -138,6 +132,16 @@ formula_ranef = all_models[all_models_index]
 formula_ef = all_models[!all_models_index]
 
 
+# Sample from all model specifications accounting for the proportion of random effects to non-random effects in the formulas
+n_sample = 1000
+prop_ranef = length(all_models[all_models_index]) / (length(all_models[!all_models_index]) + length(all_models[all_models_index]))
+prop_ef = length(all_models[!all_models_index]) / (length(all_models[!all_models_index]) + length(all_models[all_models_index]))
+
+
+ranef_sample =  sample(formula_ranef, n_sample*prop_ranef, replace = FALSE)
+ef_sample = sample(formula_ef, n_sample*prop_ef, replace = FALSE)
+
+
 # Function extracting estimates, se, z-values and p-value from models.
 # Use as wrapper function around the models to extract relevant statistics only and reducing the output size.
 extract_statistics = function(model, var_estimate) {
@@ -162,26 +166,19 @@ extract_statistics = function(model, var_estimate) {
 }
 
 
-# Sample from all model specifications for a "minimum viable product" to work with
-n_sample = 100
-
-ranef_sample =  sample(formula_ranef, n_sample, replace = FALSE)
-ef_sample = sample(formula_ef, n_sample, replace = FALSE)
-
-
 # Preparing parallel processing
 num_cores = detectCores() - 2 # Not using all cores due to working memory limitations
 
 
 # Run models corresponding to their specification as glmer or glm. Parallel processing to decrease running time.
 # Calling summary to generate a homogeneous outcome structure which needed for subsetting. Wrap model call within the above-define function.
-all_models_glmer_results = mclapply(ranef_sample,
-                                    mc.cores = num_cores,
-                                    function(x) extract_statistics(summary(glmer(x, data = dat, family = "binomial", nAGQ = 0)), "skin_tone_num"))
+all_models_glmer_results = pbmclapply(ranef_sample,
+                                      mc.cores = num_cores,
+                                      function(x) extract_statistics(summary(glmer(x, data = dat, family = "binomial", nAGQ = 0)), "skin_tone_num"))
 
-all_models_glm_results = mclapply(ef_sample,
-                                  mc.cores = num_cores,
-                                  function(x) extract_statistics(summary(glm(x, data = dat, family = "binomial")), "skin_tone_num"))
+all_models_glm_results = pbmclapply(ef_sample,
+                                    mc.cores = num_cores,
+                                    function(x) extract_statistics(summary(glm(x, data = dat, family = "binomial")), "skin_tone_num"))
 
 
 # lapply doesn't keep the name, hence, re-assigning them
@@ -189,10 +186,11 @@ names(all_models_glmer_results) = ranef_sample
 names(all_models_glm_results) = ef_sample
 
 
-# Converting list to data frame while retaining item names and combining to one data frame
+# Converting list to data frame while retaining item names
 statistics_glmer = data.frame(do.call(rbind, all_models_glmer_results))
 statistics_glm = data.frame(do.call(rbind, all_models_glm_results))
 
+# Combining to one data frame
 df = rbind(statistics_glmer, statistics_glm)
 
 
@@ -223,10 +221,13 @@ write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
 
 # Build data frame that includes the specifications and the analysis results
 analysed_specifications = inner_join(specifications, df, by = "formula")
-analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 2 & estimate_oddsratio <= 1.5) # Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
-analysed_specifications = analysed_specifications[ , c(2:19, 24:25, 28:ncol(analysed_specifications))] # select variable of interest i.e., covariates and dv
-analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
 
+indexing_missing_cases = df$formula %in% analysed_specifications$formula; df[!indexing_missing_cases, ] # Identifying missing cases. Apparently due to a "1" at the formulas' end. Due to n = 5 negligible. 
+unsually_high_or = df[df$estimate_oddsratio > 100, ] # Summary statistics show OR higher than 150; those are exclusive as outliers
+
+analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 100) # Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
+analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
+analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")] # select variable of interest i.e., covariates and "estimate_oddsratio"
 colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")
 
 
