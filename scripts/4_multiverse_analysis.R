@@ -190,6 +190,7 @@ names(all_models_glm_results) = ef_sample
 statistics_glmer = data.frame(do.call(rbind, all_models_glmer_results))
 statistics_glm = data.frame(do.call(rbind, all_models_glm_results))
 
+
 # Combining to one data frame
 df = rbind(statistics_glmer, statistics_glm)
 
@@ -214,7 +215,50 @@ df$estimate_oddsratio = with(df, exp(estimate))
 df$ci_lower_oddsratio = with(df, exp(ci_lower))
 df$ci_upper_oddsratio = with(df, exp(ci_upper))
 
+
+# Calculate proportion of significant effects
+sum(df$below_alpha == "Significant") / nrow(df) # = 89.7%
+
+
 write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
+
+
+#............................................# Rain cloud plot #...........................................#
+
+vibration_of_effect = df %>%
+  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 4) %>% 
+  ggplot(aes(x = "", y = estimate_oddsratio)) +
+  geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
+  geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
+             position = position_jitter(width = .03, seed = 123), size = 3, shape = 20, alpha = 0.5, stroke = 0) +
+  geom_boxplot(aes(x = 0.81, y = estimate_oddsratio), alpha = 0.5, width = 0.1, colour = "black") +
+  geom_hline(yintercept = 1.31, linetype = "dashed", color = "black") +
+  annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
+  scale_color_manual(values = c("red", "black")) +
+  scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
+  labs(title = "Vibration of effect due to covariate specification", subtitle = "N = 1,000; Odds ratio (OR)") +
+  coord_flip() +
+  theme_classic() +
+  theme(axis.line.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.title.align = 1,
+        legend.text = element_text(size = 11),
+        legend.direction = "vertical",
+        legend.title = element_blank(),
+        legend.margin = margin(b = -0.73, unit = "cm"),
+        legend.box.margin = margin(b = -0.73, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic")) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
+
+vibration_of_effect
+
+ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, width = 11, height = 5)
 
 
 #............................................# Covariates effects #.........................................#
@@ -222,25 +266,44 @@ write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
 # Build data frame that includes the specifications and the analysis results
 analysed_specifications = inner_join(specifications, df, by = "formula")
 
-indexing_missing_cases = df$formula %in% analysed_specifications$formula; df[!indexing_missing_cases, ] # Identifying missing cases. Apparently due to a "1" at the formulas' end. Due to n = 5 negligible. 
-unsually_high_or = df[df$estimate_oddsratio > 100, ] # Summary statistics show OR higher than 150; those are exclusive as outliers
 
-analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 100) # Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
+# Identifying missing cases. Apparently due to a "1" at the formulas' end. Due to n = 5 negligible. 
+indexing_missing_cases = df$formula %in% analysed_specifications$formula; df[!indexing_missing_cases, ]
+
+
+# Summary statistics show OR higher than 150; those are excluded as outliers
+unsually_high_odds_ratio = df[df$estimate_oddsratio > 100, ]
+
+
+# Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
+analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 100) 
+
+
+# Assigning significance labels
 analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
-analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")] # select variable of interest i.e., covariates and "estimate_oddsratio"
+
+# Selecting relevant columns for a better overview (covariates and "estimate_oddsratio")
+analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")]
+
+
+# The original variable names contain variable class e.g., "factor(specific_pos)". Those are removed by assigned "clean" names.
 colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")
 
 
-# Run linear model to get the specified effects of each covariate (included yes/no)
+# Save as csv
+# write.csv(analysed_specifications, here::here("data", "4_model_outcome_data_specifications.csv"), row.names = FALSE)
+
+
+# Run linear model to get the specified effects of each covariate (factor levels: included yes/no)
 impact_mod = lm(estimate_oddsratio ~ factor(specific_pos) + factor(height_cm) + factor(weight_kg) + factor(league_country) + factor(age_yrs) + factor(goals) + factor(club) + factor(ref_country) + factor(ref) + factor(victories) + factor(player_cards_received) + factor(player) + factor(ref_cards_assigned) + factor(ties) + factor(games),
                 data = analysed_specifications)
 impact_summary = summary(impact_mod)
 
 
-# Extract data from model and save as data frame
-impact_coef = data.frame(impact_summary$coefficients)[c(-1), 1]
-impact_se = data.frame(impact_summary$coefficients)[c(-1), 2]
-impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), 4]
+# Extract data from model (without the intercept) and save as data frame
+impact_coef = data.frame(impact_summary$coefficients)[c(-1), "Estimate"]
+impact_se = data.frame(impact_summary$coefficients)[c(-1), "Std..Error"]
+impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), "Pr...t.."]
 impact_names = c("Position", "Height", "Weight", "Lg. country", "Age", "Goals", "Club", "Ref country", "Ref", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
 
 impact_df = data.frame(cbind(impact_names,
@@ -258,3 +321,127 @@ impact_df$ci_upper_oddsratio = with(impact_df, exp(ci_upper))
 impact_df$below_alpha = with(impact_df, ifelse(as.numeric(impact_pvalue) < 0.05, "Significant", "Non-significant"))
 
 write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.names = FALSE)
+
+
+#.........................................# Covariate Effects plot #.......................................#
+
+# Order data frame from lowest to highest odds ratio
+impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
+
+covariate_effects = impact_df %>%
+  ggplot(aes(x = reorder(x = impact_names, X = impact_coef), impact_coef)) +
+  geom_point(aes(color = below_alpha)) +
+  geom_hline(yintercept = 0) +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
+  scale_color_manual(values = c("red", "black")) +
+  scale_y_continuous(name = "Estimates\n", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
+  labs(title = "Specified effect of covatiates", subtitle = "N = 1,000; 95% CI", x = "Covariate") +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(colour = "grey"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
+        legend.position = "top",
+        legend.justification = "left",
+        legend.title.align = 1,
+        legend.text = element_text(size = 11),
+        legend.direction = "vertical",
+        legend.title = element_blank(),
+        legend.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
+        legend.box.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic")) +
+  guides(colour = guide_legend(reverse = TRUE))
+
+covariate_effects
+
+ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width = 11, height = 5)
+
+
+#................................................# SCA plot #..............................................#
+# In order to built the SCA plot, the dataset containing all specifications and the relevant statistics
+# first need to be transformed into a long format to be able to create the specification table.
+# Moreover, the specifications need an identifier to be able to identically sort the top and bottom plot
+# (otherwise the entire SCA plot would not make sense). The sorting depends on the odds ratios from lowest to highest.
+
+
+# Order by odds ratio, low to high
+analysed_specifications = analysed_specifications[order(analysed_specifications$estimate_oddsratio), ]
+
+# Assign identifier
+analysed_specifications$id = factor(seq(1:nrow(analysed_specifications)))
+
+
+# Preparing specification matrix i.e., the bottom part of the SCA plot
+## Subset covariates and statistics
+prepare_long_df = analysed_specifications[ , c(4:18, 20, 21, 24)]
+
+## FALSE ro NA to better subset
+prepare_long_df[prepare_long_df == FALSE] = NA 
+
+## Wide to long format
+long_df = melt(setDT(prepare_long_df), id.vars = c("id", "below_alpha"), variable.name = c("estimate_oddsratio"))
+
+## Exclude NA cases
+long_df = long_df[complete.cases(long_df), ]
+
+## Exclude outcome variable
+long_df = long_df[!grepl("estimate_oddsratio", long_df$estimate_oddsratio), ]
+colnames(long_df) = c("id", "below_alpha", "covariate", "x")
+
+## Exclude value column
+long_df = long_df[ , c("id", "below_alpha", "covariate")] 
+
+## order covariate effects low to high
+impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
+
+long_df$covariate = factor(long_df$covariate,
+                           levels = c("club", "victories", "weight_kg", "player_cards_received", "ties", "league_country", "specific_pos", "age_yrs", "ref", "ref_cards_assigned", "goals", "height_cm", "games", "ref_country", "player"),
+                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Lg. country", "Position", "Age", "Ref", "Cards assig.", "Goals", "Height", "Games", "Ref country", "Player"))
+
+
+# Build specification curve plot
+top = analysed_specifications %>% 
+  ggplot(aes(as.numeric(id), estimate_oddsratio)) +
+  geom_point(aes(colour = below_alpha), size = 1, alpha = 0.5) +
+  geom_ribbon(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio), alpha = 0.3) +
+  geom_hline(yintercept = 1, color = "black") +
+  scale_color_manual(values = c("red", "black")) +
+  scale_x_discrete(name = "", expand = c(0.01, 0)) +
+  scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
+  labs(title = "Results of the specification-curve analysis", subtitle = "N = 1,000; 95% CI") +
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(colour = "grey"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.line.x = element_blank(),
+        plot.margin = unit(c(0.5, 1, 0, 1), "cm"),
+        legend.position = "top",
+        legend.title.align = 1,
+        legend.text = element_text(size = 11),
+        legend.direction = "horizontal",
+        legend.title = element_blank(),
+        legend.margin = margin(t = -0.5, b = -0.2, unit = "cm"),
+        legend.box.margin = margin(t = -0.5, b = -0.2, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic", margin = margin(0, 0, 20, 0))) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
+
+
+bottom = long_df %>%
+  ggplot(aes(x = id, y = covariate)) +
+  geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
+  scale_fill_manual(values = c("red", "black")) +
+  scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
+  scale_y_discrete(name = "Covariates", expand = c(0.03, 0)) +
+  theme_classic() +
+  theme(legend.position = "none", 
+        axis.ticks.y = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        plot.margin = unit(c(0, 1, 0.5, 1), "cm"),)
+
+sca_plot = plot_grid(top, bottom, ncol = 1, align = "v")
+sca_plot
+
+ggsave(here::here("figures", "sca_plot.png"), sca_plot, width = 10, height = 6)
