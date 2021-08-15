@@ -17,11 +17,12 @@ bibliography: references.bib
 csl: apa.csl
 header-includes:
   - \usepackage[ruled,vlined]{algorithm2e}
+  - \usepackage{float}
 ---
 
 ```{r setup, include = FALSE}
 
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
 
 #...............................................# Set parameters #..............................................#
 
@@ -247,7 +248,12 @@ long_df = data.frame(left_join(long_df, id_oddsratio_below_alpha, by = "id"))
 # Assign proper names for visualisation
 long_df$variable = factor(long_df$variable,
                            levels = c("club", "victories", "weight_kg", "player_cards_received", "ties", "league_country", "specific_pos", "age_yrs", "ref", "ref_cards_assigned", "goals", "height_cm", "games", "ref_country", "player"),
-                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Country", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
+                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "League", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
+
+
+# Covariates should be sorted based in their impact.
+dat_covariates = dat_covariates[order(dat_covariates$estimate_oddsratio), ]
+ordered_covar = dat_covariates$impact_names
 
 
 # build plot
@@ -260,13 +266,14 @@ top = analysed_specifications %>%
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
-  labs(title = "Specification curve", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
+  labs(title = "Specification curve",
+       subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank(),
         axis.line.x = element_blank(),
-        plot.margin = unit(c(0.5, 1, 0, 1), "cm"),
+        plot.margin = unit(c(0, 1, 0, 1), "cm"),
         legend.position = "top",
         legend.title.align = 1,
         legend.text = element_text(size = 11),
@@ -279,9 +286,8 @@ top = analysed_specifications %>%
         text = element_text(size = 10)) +
   guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
 
-
 bottom = long_df %>%
-  ggplot(aes(x = id, y = reorder(x = variable, X = as.numeric(estimate_oddsratio)))) +
+  ggplot(aes(x = id, y = factor(variable, levels = ordered_covar))) +
   geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
   scale_fill_manual(values = c("red", "black")) +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
@@ -321,7 +327,8 @@ vibration_of_effect = dat_models_specifications %>%
   annotate("text", x = 1.516, y = 1.375, label = "Silberzahn et al. (2018) \nMedian OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
-  labs(title = "Results space defined through covariate specification", subtitle = paste0("N = ", nrow(dat_models_specifications), ", Odds ratio (OR)", collapse = "")) +
+  labs(title = "Results space defined through covariate specification",
+       subtitle = paste0("N = ", nrow(dat_models_specifications), ", Odds ratio (OR)", collapse = "")) +
   coord_flip() +
   theme_classic() +
   theme(axis.line.y = element_blank(),
@@ -360,8 +367,10 @@ covariate_effects = dat_covariates %>%
   geom_hline(yintercept = 0) +
   geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
   scale_color_manual(values = c("red", "black")) +
-  scale_y_continuous(name = "Estimates", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
-  labs(title = "Specified covariate effects", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
+  scale_y_continuous(name = "Estimates",
+                     labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
+  labs(title = "Specified covariate effects",
+       subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),

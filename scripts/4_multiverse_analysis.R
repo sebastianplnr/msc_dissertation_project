@@ -270,7 +270,8 @@ vibration_of_effect = analysed_specifications %>%
   annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
-  labs(title = "Vibration of effect due to covariate specification", subtitle = paste0("N = ", nrow(analysed_specifications), ", Odds ratio (OR)", collapse = "")) +
+  labs(title = "Vibration of effect due to covariate specification",
+       subtitle = paste0("N = ", nrow(analysed_specifications), ", Odds ratio (OR)", collapse = "")) +
   coord_flip() +
   theme_classic() +
   theme(axis.line.y = element_blank(),
@@ -307,7 +308,7 @@ impact_summary = summary(impact_mod)
 impact_coef = data.frame(impact_summary$coefficients)[c(-1), "Estimate"]
 impact_se = data.frame(impact_summary$coefficients)[c(-1), "Std..Error"]
 impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), "Pr...t.."]
-impact_names = c("Position", "Height", "Weight", "Leauge", "Age", "Goals", "Club", "Ref. country", "Referee", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
+impact_names = c("Position", "Height", "Weight", "League", "Age", "Goals", "Club", "Ref. country", "Referee", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
 
 impact_df = data.frame(cbind(impact_names,
                              impact_coef,
@@ -337,8 +338,10 @@ covariate_effects = impact_df %>%
   geom_hline(yintercept = 0) +
   geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
   scale_color_manual(values = c("red", "black")) +
-  scale_y_continuous(name = "Estimates\n", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
-  labs(title = "Specified effect of covatiates", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
+  scale_y_continuous(name = "Estimates\n",
+                     labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
+  labs(title = "Specified effect of covatiates",
+       subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -392,7 +395,12 @@ long_df = data.frame(left_join(long_df, id_oddsratio_below_alpha, by = "id"))
 # Assign proper names for visualisation
 long_df$variable = factor(long_df$variable,
                            levels = c("club", "victories", "weight_kg", "player_cards_received", "ties", "league_country", "specific_pos", "age_yrs", "ref", "ref_cards_assigned", "goals", "height_cm", "games", "ref_country", "player"),
-                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Country", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
+                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "League", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
+
+
+# Covariates should be sorted based in their impact.
+impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
+ordered_covar = impact_df$impact_names
 
 
 # Build specification curve plot
@@ -405,7 +413,8 @@ top = analysed_specifications %>%
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
-  labs(title = "Results of the specification-curve analysis", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
+  labs(title = "Results of the specification-curve analysis",
+       subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
@@ -425,7 +434,7 @@ top = analysed_specifications %>%
 
 
 bottom = long_df %>%
-  ggplot(aes(x = id, y = reorder(x = variable, X = as.numeric(estimate_oddsratio)))) +
+  ggplot(aes(x = id, y = factor(variable, levels = ordered_covar))) +
   geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
   scale_fill_manual(values = c("red", "black")) +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
