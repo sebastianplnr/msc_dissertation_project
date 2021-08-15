@@ -72,17 +72,14 @@ invisible(lapply(requiredPackages, require, character.only = TRUE))
 dat = data.frame(fread(here::here("data", "3_prepared_data.csv")))
 
 ## Outcomes of running the 1,000 models
-dat_models = data.frame(fread(here::here("data", "4_model_outcome_data.csv")))
-
-# 
-dat_models_specifications = data.frame(fread(here::here("data", "4_model_outcome_data_specifications.csv")))
+dat_models_specifications = data.frame(fread(here::here("data", "4_model_outcomes_specifications_merged.csv")))
 
 ## Outcome of running the "meta-ANOVA" to get the covariates' specified effects
 dat_covariates = data.frame(fread(here::here("data", "4_covariate_effect_data.csv")))
 
 
 # Adjusting class for proper visualisation
-dat_models$below_alpha = factor(dat_models$below_alpha)
+dat_models_specifications$below_alpha = factor(dat_models_specifications$below_alpha)
 
 dat_covariates$impact_names = factor(dat_covariates$impact_names)
 dat_covariates$below_alpha = factor(dat_covariates$below_alpha)
@@ -114,6 +111,7 @@ dat_covariates$below_alpha = factor(dat_covariates$below_alpha)
      @silberzahn2018 and @botvinik-nezer2020, therefore, suggest using multiverse analysis (also known as specification-curve analysis) as an alternative to crowdsourcing. This approach requires identifying and running all plausible analytical strategies. Plausible strategies are defined as statistically valid, non-redundant, tests appropriate to the research question. Their aggregated results are then used to make inferences about the research question. Despite being statistically more complex and computationally more intense, this approach has the advantages of only needing one, or ideally a couple, researchers. Moreover, a researcher's inherent strategy bias is neutralised and noise is made transparent [@simonsohn2020]. Multiverse approaches are therefore well suited for assessing the scope of variation induced by different analytical strategies. For instance, @patel2015 assessed an effect's robustness by running every combination of covariates and modelling options. Their conclusion was the larger the variation of outcomes, the less robust is the effect, and the less it should therefore to be trusted. The authors termed this measure the *vibration of effect* (VoE).
 
      Taken together, researchers make many analytical decisions throughout conduction a study which are know as *researcher degrees of freedom*. Crowdsourcing analysis presents a strategy to understand their induced variation, but is impractical due to its substantial time and personnel requirements. Multiverse analysis present a promising, low-personnel, but computationally intense alternative to assessing the scope this variation. Despite observing substantial variation in crowdsourced data analysis projects little is known about the extend to which these approaches cover the full range of possible results. In this project, using principles of multiverse analysis I will define the results space of @silberzahn2018. By doing so I aim at further understanding how a specific analysis strategy affects its result. To my knowldge this is the first project runing not only all *plausible* but all *possible* analytical strategies to a more granular view of the results space.
+
 
 
 
@@ -214,6 +212,7 @@ plot_grid(red_card_plot, skin_tone_num_plot, imp_bias_plot, exp_bias_plot, label
 ```
 
 
+
 # Results
 ## Replicating *Team 23* analysis
      As mentioned in the above section the first steps were replicating the *team 23* analysis using their provided scripts. The results are reproducible without any adjustment. Skin tone has a significant effect on the odds of being send off the field ($OR = 1.311$, 95%CI [1.099, 1.563], $p = 0.003$). This means while keeping all other variables constant for every unit increase in skin tone rating (darker skin tone), the odds of being send off the field increase by roughly 131%. The interaction terms of skin tone and implicit racial bias ($OR = 0.004$, 95%CI [0.000, 23.259], $p = 0.211$) as well as skin tone and explicit bias ($OR = 1.837$, 95%CI [0.493, 6.848], $p = 0.365$) are both non-significant. In accordance with the original analysis, there are also significant differences between leagues and positions as well as implicit racial bias scores. Explicit bias scores are on verge of being non-significant. This analysis only aimed at testing reproducibility, which proved to be true, further results details are forfeited.
@@ -225,43 +224,35 @@ plot_grid(red_card_plot, skin_tone_num_plot, imp_bias_plot, exp_bias_plot, label
 
 ```{r sca_plot, echo = FALSE, fig.width = 8, fig.align = "center", fig.cap = "Convential specification curve. Each outcome (i.e., point) in the top corresponds to the indicated covariates in the bottom table. Due to the large number of specifications, this plot is not as informative as it is supposed to be. It is, therefore, merely making an argument for needing and alternative.", warning = FALSE}
 
-# Order by odds ratio, low to high
+# Order by odds ratio, low to high and assign identifier
 analysed_specifications = dat_models_specifications[order(dat_models_specifications$estimate_oddsratio), ]
-
-# Assign identifier
 analysed_specifications$id = factor(seq(1:nrow(analysed_specifications)))
 
 
-# Preparing specification matrix i.e., the bottom part of the SCA plot
-## Subset covariates and statistics
-prepare_long_df = analysed_specifications[ , c(4:18, 20, 21, 24)]
+# Preparing the bottom part of the SCA plot by transforming wide to long
+## Subset covariates and relevant statistics
+prepare_long_df = analysed_specifications %>% select(specific_pos:games, id)
 
-## FALSE ro NA to better subset
-prepare_long_df[prepare_long_df == FALSE] = NA 
+## transform wide to long
+long_df = melt(data.table(prepare_long_df), "id", variable.names = "covariate")
+long_df = long_df[long_df$value == TRUE, c("id", "variable")]
 
-## Wide to long format
-long_df = melt(setDT(prepare_long_df), id.vars = c("id", "below_alpha"), variable.name = c("estimate_oddsratio"))
+## statistics are still missing (odds ratio and significance)
+id_oddsratio_below_alpha = analysed_specifications %>% select(id, estimate_oddsratio, below_alpha)
 
-## Exclude NA cases
-long_df = long_df[complete.cases(long_df), ]
+## Adding (or joining) the statistics to the long data frame
+long_df = data.frame(left_join(long_df, id_oddsratio_below_alpha, by = "id"))
 
-## Exclude outcome variable
-long_df = long_df[!grepl("estimate_oddsratio", long_df$estimate_oddsratio), ]
-colnames(long_df) = c("id", "below_alpha", "covariate", "x")
 
-## Exclude value column
-long_df = long_df[ , c("id", "below_alpha", "covariate")] 
-
-## order covariate effects low to high, based on the 4_covariate_effect_data.csv dataset
-impact_df = dat_covariates[order(dat_covariates$estimate_oddsratio), ]
-
-long_df$covariate = factor(long_df$covariate,
+# Assign proper names for visualisation
+long_df$variable = factor(long_df$variable,
                            levels = c("club", "victories", "weight_kg", "player_cards_received", "ties", "league_country", "specific_pos", "age_yrs", "ref", "ref_cards_assigned", "goals", "height_cm", "games", "ref_country", "player"),
-                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Lg. country", "Position", "Age", "Ref", "Cards assig.", "Goals", "Height", "Games", "Ref country", "Player"))
+                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Country", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
 
 
 # build plot
 top = analysed_specifications %>% 
+  filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(as.numeric(id), estimate_oddsratio)) +
   geom_point(aes(colour = below_alpha), size = 0.3, alpha = 0.5) +
   geom_ribbon(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio), alpha = 0.3) +
@@ -269,7 +260,7 @@ top = analysed_specifications %>%
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
-  labs(title = "Specification curve", subtitle = "N = 1,000; 95% CI") +
+  labs(title = "Specification curve", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
@@ -289,9 +280,8 @@ top = analysed_specifications %>%
   guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
 
 
-bottom = long_df %>% 
-  filter(id != "1") %>%
-  ggplot(aes(x = id, y = covariate)) +
+bottom = long_df %>%
+  ggplot(aes(x = id, y = reorder(x = variable, X = as.numeric(estimate_oddsratio)))) +
   geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
   scale_fill_manual(values = c("red", "black")) +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
@@ -312,12 +302,16 @@ sca_plot
 
 
 ## Results space
-     Shown in Figure \ref{fig:rain_cloud_plot}. The horizontal axis shows the odds rations. From top to bottom the three component show the probability density distribution, the box plot and the raw data, respectively. The dashed line indicates the original results of *team 23*, which has also been the median outcome of all analytical strategies in @silberzahn2018. Based on the raw data points, the results space can be defined as the interval between 1.081 and 1.383. The 1rd quartile   \newline
+     Shown in Figure \ref{fig:rain_cloud_plot}. The horizontal axis shows the odds rations. From top to bottom the three component show the probability density distribution, the box plot and the raw data, respectively. The dashed line indicates the original results of *team 23*, which has also been the median outcome of all analytical strategies in @silberzahn2018. Based on the raw data points, the results space can be defined as the interval between 1.081 and 1.383. The 1st quatile equals to 1.206, the median equals to 1.248 and the 3rd quartile equals to 1.293. Therefore, as also evidenced by the probability density distribution, 50% of the lay withing a very narrow interval (between 1st and 3rd quartile). The outcome of *team 23* (1.31) is still included in the interval, but it is outside the middle 50% of the data.
+
+     The probability density distribution also has an interesting shape, having two peaks. This suggests a particular covariate combination structure causing two focal points. Based on this graph alone though it is not possible to decipher the underlying structure though. What also seem to be more apparent in this graph than in the specification curve is that the non-significant values also seem to revolve round to focal points. One being around 1.13 and the other around 1.19. This also suggest some influential covariate or covariate structure that is cause non-significance.
+
+     Finally, for transparency purpose, it also needs to be mentioned that eight points were excluded from the visualisation. Four of them were "infinite", one effectively approaching infinity, one being in the lowest million range, one being 150, and a final being 4.6. I specifically chose not to include the latter one in the graph as it would despite is relatively close numerical proximity skewed the distribution being at least a visual outlier. \newline
 
 ```{r rain_cloud_plot, echo = FALSE, fig.width = 8, fig.align = "center", fig.cap = "The rain cloud plot is comprised of three parts. The probability density distribution, the box plot and the raw data points. This allows for an transparent and bias assessment of the results space and its distribution."}
 
-vibration_of_effect = dat_models %>%
-  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 4) %>% 
+vibration_of_effect = dat_models_specifications %>%
+  filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
   geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
@@ -327,7 +321,7 @@ vibration_of_effect = dat_models %>%
   annotate("text", x = 1.516, y = 1.375, label = "Silberzahn et al. (2018) \nMedian OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
-  labs(title = "Results space defined through covariate specification", subtitle = "N = 1,000; Odds ratio (OR)") +
+  labs(title = "Results space defined through covariate specification", subtitle = paste0("N = ", nrow(dat_models_specifications), ", Odds ratio (OR)", collapse = "")) +
   coord_flip() +
   theme_classic() +
   theme(axis.line.y = element_blank(),
@@ -354,7 +348,7 @@ vibration_of_effect
 
 
 ## Specified covariate effects
-     \newline
+     The final graph shows the specified covariate effects. On the horizontal axis are the covariates, on the vertical axis are the estimates. The covariates are sorted from negative to positive impact. Black indicates a significant effect, red non-significant. The error bars represent the 95% CI. While four covariates are significant, their effects seem relatively weak, ranging from -0.1 to 0.05, only. Interesting is also which covariates are significant. The *team 23* analysis included league country, position, referee and player as covariates.  \newline
 
 ```{r covar_plot, echo = FALSE, fig.width = 8, fig.align = "center", fig.cap = "The specified covariate effects indicate the extend to which a covariate influences the outcome measures."}
 
@@ -367,7 +361,7 @@ covariate_effects = dat_covariates %>%
   geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Estimates", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
-  labs(title = "Specified covariate effects", subtitle = "N = 1,000; 95% CI", x = "Covariates") +
+  labs(title = "Specified covariate effects", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),

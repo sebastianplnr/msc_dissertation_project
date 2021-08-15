@@ -220,13 +220,47 @@ df$ci_upper_oddsratio = with(df, exp(ci_upper))
 sum(df$below_alpha == "Significant") / nrow(df) # = 89.7%
 
 
-write.csv(df, here::here("data", "4_model_outcome_data.csv"), row.names = FALSE)
+# Save a potential interim outcome
+# write.csv(df, here::here("data", "4_model_outcomes_data.csv"), row.names = FALSE)
+
+
+# Build data frame that includes the specifications and the analysis results
+analysed_specifications = inner_join(specifications, df, by = "formula")
+
+
+# Joining results in 5 missing cases, which are identified. Apparently due to a "1" at the formulas' end.
+# No apparent systematic error. N = 5, hence, deemed negligible. 
+indexing_missing_cases = df$formula %in% analysed_specifications$formula
+df[!indexing_missing_cases, ]
+
+
+# Summary statistics show OR higher than 150; those are excluded as outliers
+unsually_high_odds_ratio = df %>% filter(estimate_oddsratio > 100)
+
+
+# Excluding the seven outliers
+analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 100)
+
+
+# Assigning significance labels
+analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
+
+# Selecting relevant columns for a better overview (covariates and "estimate_oddsratio")
+analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")]
+
+
+# The original variable names contain variable class e.g., "factor(specific_pos)". Those are removed by assigning "clean" names.
+colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")
+
+
+# Save as csv
+write.csv(analysed_specifications, here::here("data", "4_model_outcomes_specifications_merged.csv"), row.names = FALSE)
 
 
 #............................................# Rain cloud plot #...........................................#
 
-vibration_of_effect = df %>%
-  filter(estimate_oddsratio > 0 & estimate_oddsratio <= 4) %>% 
+vibration_of_effect = analysed_specifications %>%
+  filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
   geom_point(aes(x = 0.6, y = estimate_oddsratio, colour = below_alpha),
@@ -236,7 +270,7 @@ vibration_of_effect = df %>%
   annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
-  labs(title = "Vibration of effect due to covariate specification", subtitle = "N = 1,000; Odds ratio (OR)") +
+  labs(title = "Vibration of effect due to covariate specification", subtitle = paste0("N = ", nrow(analysed_specifications), ", Odds ratio (OR)", collapse = "")) +
   coord_flip() +
   theme_classic() +
   theme(axis.line.y = element_blank(),
@@ -263,37 +297,6 @@ ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, wi
 
 #............................................# Covariates effects #.........................................#
 
-# Build data frame that includes the specifications and the analysis results
-analysed_specifications = inner_join(specifications, df, by = "formula")
-
-
-# Identifying missing cases. Apparently due to a "1" at the formulas' end. Due to n = 5 negligible. 
-indexing_missing_cases = df$formula %in% analysed_specifications$formula; df[!indexing_missing_cases, ]
-
-
-# Summary statistics show OR higher than 150; those are excluded as outliers
-unsually_high_odds_ratio = df[df$estimate_oddsratio > 100, ]
-
-
-# Excluding the zero cases makes a big difference: excluded R^2 = 0.9734, included R^2 = 0.3852
-analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio < 100) 
-
-
-# Assigning significance labels
-analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
-
-# Selecting relevant columns for a better overview (covariates and "estimate_oddsratio")
-analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")]
-
-
-# The original variable names contain variable class e.g., "factor(specific_pos)". Those are removed by assigned "clean" names.
-colnames(analysed_specifications) = c("skin_tone_num", "imp_bias", "exp_bias", "specific_pos", "height_cm", "weight_kg", "league_country", "age_yrs", "goals", "club", "ref_country", "ref", "victories", "player_cards_received", "player", "ref_cards_assigned", "ties", "games", "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")
-
-
-# Save as csv
-# write.csv(analysed_specifications, here::here("data", "4_model_outcome_data_specifications.csv"), row.names = FALSE)
-
-
 # Run linear model to get the specified effects of each covariate (factor levels: included yes/no)
 impact_mod = lm(estimate_oddsratio ~ factor(specific_pos) + factor(height_cm) + factor(weight_kg) + factor(league_country) + factor(age_yrs) + factor(goals) + factor(club) + factor(ref_country) + factor(ref) + factor(victories) + factor(player_cards_received) + factor(player) + factor(ref_cards_assigned) + factor(ties) + factor(games),
                 data = analysed_specifications)
@@ -304,7 +307,7 @@ impact_summary = summary(impact_mod)
 impact_coef = data.frame(impact_summary$coefficients)[c(-1), "Estimate"]
 impact_se = data.frame(impact_summary$coefficients)[c(-1), "Std..Error"]
 impact_pvalue = data.frame(impact_summary$coefficients)[c(-1), "Pr...t.."]
-impact_names = c("Position", "Height", "Weight", "Lg. country", "Age", "Goals", "Club", "Ref country", "Ref", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
+impact_names = c("Position", "Height", "Weight", "Leauge", "Age", "Goals", "Club", "Ref. country", "Referee", "Victories", "Cards rec.", "Player", "Cards assig.", "Ties", "Games")
 
 impact_df = data.frame(cbind(impact_names,
                              impact_coef,
@@ -325,17 +328,17 @@ write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.name
 
 #.........................................# Covariate Effects plot #.......................................#
 
-# Order data frame from lowest to highest odds ratio
+# Order covariate effects low to high
 impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
 
 covariate_effects = impact_df %>%
-  ggplot(aes(x = reorder(x = impact_names, X = impact_coef), impact_coef)) +
-  geom_point(aes(color = below_alpha)) +
+  ggplot(aes(x = reorder(x = impact_names, X = as.numeric(impact_coef)), y = as.numeric(impact_coef))) +
+  geom_point(aes(color = factor(below_alpha))) +
   geom_hline(yintercept = 0) +
   geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, color = below_alpha), width = 0.1) +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Estimates\n", labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
-  labs(title = "Specified effect of covatiates", subtitle = "N = 1,000; 95% CI", x = "Covariate") +
+  labs(title = "Specified effect of covatiates", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -362,45 +365,39 @@ ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width 
 # first need to be transformed into a long format to be able to create the specification table.
 # Moreover, the specifications need an identifier to be able to identically sort the top and bottom plot
 # (otherwise the entire SCA plot would not make sense). The sorting depends on the odds ratios from lowest to highest.
+# Finally, despite being presented in a different order in the thesis, the SCA plot has to be created last as e.g.,
+# order of covariates in the bottom table depended on the outcome of the specified covariate effects analysis.
 
 
-# Order by odds ratio, low to high
+# Order by odds ratio, low to high and assign identifier
 analysed_specifications = analysed_specifications[order(analysed_specifications$estimate_oddsratio), ]
-
-# Assign identifier
 analysed_specifications$id = factor(seq(1:nrow(analysed_specifications)))
 
 
-# Preparing specification matrix i.e., the bottom part of the SCA plot
-## Subset covariates and statistics
-prepare_long_df = analysed_specifications[ , c(4:18, 20, 21, 24)]
+# Preparing the bottom part of the SCA plot by transforming wide to long
+## Subset covariates and relevant statistics
+prepare_long_df = analysed_specifications %>% select(specific_pos:games, id)
 
-## FALSE ro NA to better subset
-prepare_long_df[prepare_long_df == FALSE] = NA 
+## transform wide to long
+long_df = melt(data.table(prepare_long_df), "id", variable.names = "covariate")
+long_df = long_df[long_df$value == TRUE, c("id", "variable")]
 
-## Wide to long format
-long_df = melt(setDT(prepare_long_df), id.vars = c("id", "below_alpha"), variable.name = c("estimate_oddsratio"))
+## statistics are still missing (odds ratio and significance)
+id_oddsratio_below_alpha = analysed_specifications %>% select(id, estimate_oddsratio, below_alpha)
 
-## Exclude NA cases
-long_df = long_df[complete.cases(long_df), ]
+## Adding (or joining) the statistics to the long data frame
+long_df = data.frame(left_join(long_df, id_oddsratio_below_alpha, by = "id"))
 
-## Exclude outcome variable
-long_df = long_df[!grepl("estimate_oddsratio", long_df$estimate_oddsratio), ]
-colnames(long_df) = c("id", "below_alpha", "covariate", "x")
 
-## Exclude value column
-long_df = long_df[ , c("id", "below_alpha", "covariate")] 
-
-## order covariate effects low to high
-impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
-
-long_df$covariate = factor(long_df$covariate,
+# Assign proper names for visualisation
+long_df$variable = factor(long_df$variable,
                            levels = c("club", "victories", "weight_kg", "player_cards_received", "ties", "league_country", "specific_pos", "age_yrs", "ref", "ref_cards_assigned", "goals", "height_cm", "games", "ref_country", "player"),
-                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Lg. country", "Position", "Age", "Ref", "Cards assig.", "Goals", "Height", "Games", "Ref country", "Player"))
+                           labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "Country", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
 
 
 # Build specification curve plot
-top = analysed_specifications %>% 
+top = analysed_specifications %>%
+  filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(as.numeric(id), estimate_oddsratio)) +
   geom_point(aes(colour = below_alpha), size = 1, alpha = 0.5) +
   geom_ribbon(aes(ymin = ci_lower_oddsratio, ymax = ci_upper_oddsratio), alpha = 0.3) +
@@ -408,7 +405,7 @@ top = analysed_specifications %>%
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
-  labs(title = "Results of the specification-curve analysis", subtitle = "N = 1,000; 95% CI") +
+  labs(title = "Results of the specification-curve analysis", subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
         axis.ticks.x = element_blank(),
@@ -428,7 +425,7 @@ top = analysed_specifications %>%
 
 
 bottom = long_df %>%
-  ggplot(aes(x = id, y = covariate)) +
+  ggplot(aes(x = id, y = reorder(x = variable, X = as.numeric(estimate_oddsratio)))) +
   geom_tile(aes(fill = below_alpha), width = 0.5, height = 0.5, color = "white") +
   scale_fill_manual(values = c("red", "black")) +
   scale_x_discrete(name = "Specifications", expand = c(0.01, 0)) +
@@ -439,7 +436,7 @@ bottom = long_df %>%
         axis.line.y = element_blank(),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank(),
-        plot.margin = unit(c(0, 1, 0.5, 1), "cm"),)
+        plot.margin = unit(c(0, 1, 0.5, 1), "cm"))
 
 sca_plot = plot_grid(top, bottom, ncol = 1, align = "v")
 sca_plot
