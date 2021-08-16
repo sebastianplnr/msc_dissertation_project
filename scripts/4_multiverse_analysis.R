@@ -451,3 +451,36 @@ sca_plot = plot_grid(top, bottom, ncol = 1, align = "v")
 sca_plot
 
 ggsave(here::here("figures", "sca_plot.png"), sca_plot, width = 10, height = 6)
+
+
+#..............................................# Volcano plot #............................................#
+
+
+volcano_plot = dat_models_specifications %>% 
+  filter(estimate_oddsratio < 4) %>% 
+  ggplot(aes(estimate_oddsratio, log10(p_value))) +
+  geom_point(aes(colour = below_alpha), alpha = 0.3) +
+  scale_x_continuous(name = "Odds ratios", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
+  scale_y_continuous(name = "Log10 p-value") +
+  scale_color_manual(values = c("red", "black")) +
+  labs(title = "Vibration of Effect",
+       subtitle = paste0("N = ", nrow(analysed_specifications), collapse = "")) +
+  theme_classic() +
+  theme(panel.grid.major = element_line(colour = "grey"),
+        plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
+        legend.position = "top",
+        legend.justification = "right",
+        legend.title.align = 1,
+        legend.text = element_text(size = 10),
+        legend.direction = "horizontal",
+        legend.title = element_blank(),
+        legend.margin = margin(t = -0.6, b = -0.2, unit = "cm"),
+        legend.box.margin = margin(t = -0.6, b = -0.2, unit = "cm"),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(face = "italic", margin = margin(0, 0, 20, 0)),
+        text = element_text(size = 10)) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
+
+volcano_plot
+
+ggsave(here::here("figures", "volcano_plot.png"), volcano_plot, width = 10, height = 6)
