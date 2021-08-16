@@ -386,7 +386,7 @@ long_df = melt(data.table(prepare_long_df), "id", variable.names = "covariate")
 long_df = long_df[long_df$value == TRUE, c("id", "variable")]
 
 ## statistics are still missing (odds ratio and significance)
-id_oddsratio_below_alpha = analysed_specifications %>% select(id, estimate_oddsratio, below_alpha)
+id_oddsratio_below_alpha = analysed_specifications %>% select(id, estimate_oddsratio, below_alpha, p_value)
 
 ## Adding (or joining) the statistics to the long data frame
 long_df = data.frame(left_join(long_df, id_oddsratio_below_alpha, by = "id"))
@@ -398,7 +398,7 @@ long_df$variable = factor(long_df$variable,
                            labels = c("Club", "Victories", "Weight", "Cards rec.", "Ties", "League", "Position", "Age", "Referee", "Cards assig.", "Goals", "Height", "Games", "Ref. country", "Player"))
 
 
-# Covariates should be sorted based in their impact.
+# Covariates should be sorted based in their impact
 impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
 ordered_covar = impact_df$impact_names
 
