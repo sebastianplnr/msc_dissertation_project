@@ -1,3 +1,9 @@
+# DISCLAIMER: The running times of the models included in the is script are extremely long (14 to 18 hours).
+# If you do not want to wait this long, you can load the models output data in line 240 (file: "4_model_outcomes_data.csv").
+# In this case please only refrain from running the section "Wrapper function, running models and output wrangling",
+# All other code is required to be run
+
+
 #...............................................# Set parameters #..............................................#
 
 # This script can be run in its entirety to reproduce the specification curve analysis for one population at a time. 
@@ -88,7 +94,7 @@ varList[["var_all"]] = var_all
 
 
 
-#.................. Prepare specifications: Create data frame from all combinations of covariates .........#
+#......................... Prepare specifications: create formulas and draw random sample .................#
 # Create TRUE/FALSE matrix for every combination of covariates
 specifications = data.frame(expand.grid(rep(list(0:1), length(covar))) == TRUE)
 
@@ -141,6 +147,9 @@ prop_ef = length(all_models[!all_models_index]) / (length(all_models[!all_models
 ranef_sample =  sample(formula_ranef, n_sample*prop_ranef, replace = FALSE)
 ef_sample = sample(formula_ef, n_sample*prop_ef, replace = FALSE)
 
+
+
+#........................# Wrapper function, running models and output wrangling #.........................#
 
 # Function extracting estimates, se, z-values and p-value from models.
 # Use as wrapper function around the models to extract relevant statistics only and reducing the output size.
@@ -220,9 +229,15 @@ df$ci_upper_oddsratio = with(df, exp(ci_upper))
 sum(df$below_alpha == "Significant") / nrow(df) # = 89.7%
 
 
-# Save a potential interim outcome
-# write.csv(df, here::here("data", "4_model_outcomes_data.csv"), row.names = FALSE)
+# Save the models output data
+write.csv(df, here::here("data", "4_model_outcomes_data.csv"), row.names = FALSE)
 
+
+
+#...............................# Process model output of visualisations #.................................#
+
+# In case models, were not run, load their outcomes
+# df = read.csv(here::here("data", "4_model_outcomes_data.csv"))
 
 # Build data frame that includes the specifications and the analysis results
 analysed_specifications = inner_join(specifications, df, by = "formula")
