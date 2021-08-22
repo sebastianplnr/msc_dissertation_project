@@ -4,16 +4,15 @@ library("tidyverse")
 library("plyr")
 library("lme4")
 
-# from raw data generate disaggregated data for logistic regression via 2_data_disaggregate.py
+# From raw data generate disaggregated data for logistic regression via 2_data_disaggregate.py
 dat = data.frame(fread(here::here("data", "2_disaggregated_data.csv")))
 
-# Silberzahn et al. 2018 list all covariates among them are two that need to be calculated: the cumulated number of cards received by a player and assigned by a referee.
-# The calculations of these covariates follows Morey and Wagenmarkers who were the team to use both covariates.
+# Silberzahn et al. 2018 list all covariates among them are two that need to be calculated: the cumulated number of cards received by a player and assigned by a referee. (More information in the codebook)
 dat = dat %>% group_by(player) %>% mutate(player_all_cards_received = sum(yellowCards + yellowReds + redCards))
 dat = dat %>% group_by(refNum) %>% mutate(ref_all_cards_assigned = sum(yellowCards + yellowReds + redCards))
 
-# select only the columns we will use in the analysis
-# adding all used covariates mentioned in Silberzahn et al. (2018) incl. main variables
+# Select only the columns we will use in the analysis
+# Adding all used covariates mentioned in Silberzahn et al. (2018) incl. main variables
 dat <- dat[, c("playerShort", "height", "weight", "birthday", "position",
                "club", "leagueCountry",
                "games",  "goals", "victories", "ties", 
@@ -21,34 +20,34 @@ dat <- dat[, c("playerShort", "height", "weight", "birthday", "position",
                "refNum", "refCountry", "refCount", "ref_all_cards_assigned",
                "meanIAT", "meanExp", "skintone")]
 
-# if we're on windows or mac you need to force the bias variables into numeric
+# If we're on windows or mac you need to force the bias variables into numeric
 dat$meanIAT <- as.numeric(as.character(dat$meanIAT))
 dat$meanExp <- as.numeric(as.character(dat$meanExp))
 
-# remove NA skintone data
+# Remove NA skintone data
 dat <- dat[!is.na(dat$skintone), ]
 
-# remove refs present in <22 dyads
-# reduces 373067 obs. by 16958
+# Remove refs present in <22 dyads
+# Reduces 373067 obs. by 16958
 dat <- dat[dat$refCount > 21, ]
 
-# remove those individuals on whom we do not have position information
+# Remove those individuals on whom we do not have position information
 NoPos <- which(dat$position == "")
 dat <- dat[-NoPos, ]
 
-# remove those where referee has unknown bias
+# Remove those where referee has unknown bias
 dat <- dat[!is.na(dat$meanIAT), ]
 dat <- dat[!is.na(dat$meanExp), ]
 
 # n = 335537 games
 
-# see what the current structure of the data is
+# See what the current structure of the data is
 str(dat)
 
 # find out how many observations we have
 ndat <- nrow(dat)
 
-# now create another variable which splits individuals into GK, Defender, Midfielder, Attacker
+# Now create another variable which splits individuals into GK, Defender, Midfielder, Attacker
 FindGeneralPos <- function(Pos) {
   if(Pos == "Goalkeeper") return("GK")
   if((Pos == "Center Back") | (Pos == "Left Fullback") | (Pos == "Right Fullback")) return("Def")
@@ -60,24 +59,24 @@ FindGeneralPos <- function(Pos) {
   return(NA)
 }
 
-# create column for GeneralPos
+# Create column for GeneralPos
 GeneralPos <- rep(NA, ndat)
 
-# fill column with GeneralPos
+# Fill column with GeneralPos
 for(i in 1:ndat) {
   GeneralPos[i] <- FindGeneralPos(as.character(dat$position[i]))
 }
 
-# variable centring
-## implicit racism in country of referee
+# Variable centring
+## Implicit racism in country of referee
 AvImpBias <- mean(dat$meanIAT)
 centImpBias <- dat$meanIAT - AvImpBias 
 
-## explicit racism in country of referee
+## Explicit racism in country of referee
 AvExpBias <- mean(dat$meanExp)
 centExpBias <- dat$meanExp - AvExpBias
 
-# calculate the players' age in years
+# Calculate the players' age in years
 calc_age_years = function(date, date_format) {
   birthday = as.Date(date, date_format)
   today = Sys.Date()
@@ -85,7 +84,7 @@ calc_age_years = function(date, date_format) {
   return(age_year)
 }
 
-# define variables for final dataset
+# Define variables for final dataset
 Finaldat <- data.frame(player = as.factor(dat$playerShort),
                        height_cm = as.numeric(dat$height),
                        weight_kg = as.numeric(dat$weight),
@@ -114,11 +113,11 @@ Finaldat <- data.frame(player = as.factor(dat$playerShort),
                        exp_bias = as.numeric(centExpBias))
 
 
-# save as csv
+# Save as csv
 write.csv(Finaldat, here::here("data", "3_prepared_data.csv"), row.names = FALSE)
 
 
-# for model selection see TJHAllRedsAnalysis.R
+# For model selection see TJHAllRedsAnalysis.R
 # FootballFinal4i.glmm <- glmer(allreds ~ ContSkinTone*ImpBias +
 #                                 league + SpecificPos +
 #                                 (1|Ref) + (1|Player),

@@ -1,4 +1,7 @@
-From a company for sports statistics, we obtained data and profile photos from all soccer players (N = 2053) playing in the first male divisions of England, Germany, France and Spain in the 2012-2013 season and all referees (N = 3147) that these players played under in their professional career. We created a dataset of player\'96referee dyads including the number of matches players and referees encountered each other and our dependent variable, the number of red cards given to a player by a particular referee throughout all matches the two encountered each other.
+DISCLAIMER: THE CODEBOOK IS LARGELY BASED ON SILBERZAHN ET AL. (2018). MODIFICATIONS WERE MADE FOR THE PURPOSE OF THE CURRENT PROJECT INCLUDING ADDING NEWLY COMPUTED VARIABLES
+
+
+From a company for sports statistics, Silberzahn et al. (2018) obtained data and profile photos from all soccer players (N = 2053) playing in the first male divisions of England, Germany, France and Spain in the 2012-2013 season and all referees (N = 3147) that these players played under in their professional career. Silberzahn et al. (2018) created a dataset of player-referee dyads including the number of matches players and referees encountered each other and our dependent variable, the number of red cards given to a player by a particular referee throughout all matches the two encountered each other.
 
 Player photos were available from the source for 1586 out of 2053 players. Players skin tone was coded by two independent raters blind to the research question who, based on their profile photo, categorized players on a 5-point scale ranging from light skin to very dark skin with neither dark nor light skin as the center value.
 
@@ -8,19 +11,19 @@ Additionally, implicit bias scores for each referee country were calculated usin
 In all, the dataset has a total of 146028 dyads of players and referees. A detailed description of all variables in the dataset can be seen in the list below.
 
 
-playerShort - short player ID
+playerShort (equivalent to the "player" variable used in the multiverse analysis) - short player ID
 
 player - player name
 
 club - player club
 
-leagueCountry - country of player club (England, Germany, France, and Spain)
+leagueCountry (renamed to: "league_country") - country of player club (England, Germany, France, and Spain)
 
 birthday - player birthday
 
-height - player height (in cm)
+height (renamed to: "height_cm") - player height (in cm)
 
-weight - player weight (in kg)
+weight (renamed to: "weight_kg") - player weight (in kg)
 
 position - detailed player position
 
@@ -34,9 +37,9 @@ defeats - losses in the player-referee dyad
 
 goals - goals scored by a player in the player-referee dyad
 
-yellowCards - number of yellow cards player received from referee
+yellowCards (renamed to: "yellow_cards") - number of yellow cards player received from referee
 
-yellowReds - number of yellow-red cards player received from referee
+yellowReds (renamed to: "red_cards") - number of yellow-red cards player received from referee
 
 redCards - number of red cards player received from referee
 
@@ -46,9 +49,9 @@ rater1 - skin rating of photo by rater 1 (5-point scale ranging from very light 
 
 rater2 - skin rating of photo by rater 2 (5-point scale ranging from very light skin to very dark skin)
 
-refNum - unique referee ID number (referee name removed for anonymizing purposes)
+refNum (renamed to: "ref") - unique referee ID number (referee name removed for anonymizing purposes)
 
-refCountry - unique referee country ID number (country name removed for anonymizing purposes)
+refCountry (renamed to: "ref_country") - unique referee country ID number (country name removed for anonymizing purposes)
 
 meanIAT - mean implicit bias score (using the race IAT) for referee country, higher values correspond to faster white | good, black | bad associations 
 
@@ -61,3 +64,32 @@ meanExp - mean explicit bias score (using a racial thermometer task) for referee
 nExp - sample size for explicit bias in that particular country
 
 seExp - standard error for mean estimate of explicit bias measure
+
+age_yrs - age in years calculated based on "birthday"
+
+
+
+# Variables created by Team 23
+skintone - average skin tone rating ("rater1" + "rater2")/2
+
+skin_tone_num - numerical version of "skintone"
+
+skin_tone_fct - categorical version of "skintone"
+
+allreds (renamed to: "all_reds") - sum of any red cards received ("yellowReds" + "redCards")
+
+allredsStrict - renamed "redCards"
+
+refCount - count for referees
+
+centImpBias (renamed to: "imp_bias") - centred around the mean version of "meanIAT"
+
+centExpBias (renamed to: exp_bias") - centred around the mean version of "meanExp"
+
+
+
+# Silberzahn et al. 2018 list all covariates among them are two that need to be calculated: the cumulated number of cards received by a player and assigned by a referee. Team 17 (Morey and Wagenmarkers, 2014) included both variables. Team 18 (Witkowiak, 2014) included "received by a player". Based on the code of team 17 it was not fully clear to me how the variables were calculated. Hence, my calculations are based on team 18, the "assigned by ref" was calculated analogously.
+ 
+player_all_cards_received = sum of all cards received (group by player, then: yellowCards + yellowReds + redCards)
+
+ref_all_cards_assigned = sum of all cards received (group by ref, then: yellowCards + yellowReds + redCards)
