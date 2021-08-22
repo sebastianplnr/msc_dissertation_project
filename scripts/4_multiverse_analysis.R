@@ -1,7 +1,7 @@
-# DISCLAIMER: The running times of the models included in the is script are extremely long (14 to 18 hours).
-# If you do not want to wait this long, you can load the models output data in line 240 (file: "4_model_outcomes_data.csv").
-# In this case please only refrain from running the section "Wrapper function, running models and output wrangling",
-# All other code is required to be run
+# DISCLAIMER: The running times of the models included in this script are extremely long (14 to 18 hours).
+# If you do not want to wait this long, you can load the models output, "4_model_outcomes_data.csv", in line 240,
+# please uncomment that line. Please only refrain from running the section "Wrapper function, running models and output wrangling",
+# line 152 to 233, all other code is required to be run.
 
 
 #...............................................# Set parameters #..............................................#
