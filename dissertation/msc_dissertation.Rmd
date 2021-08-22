@@ -4,7 +4,7 @@ title: |
 subtitle: |
   | *Assessing results space and structure of @silberzahn2018 through model specification*
   |
-  | MSc Dissertation - DRAFT
+  | MSc Dissertation
 author: "Sebastian Ploner, sploner1@sheffield.ac.uk, University of Sheffield"
 output:
   pdf_document:
@@ -160,7 +160,9 @@ $variables$ $\leftarrow$ Define dependent, base variables and covariates \\
 $specifications$ $\leftarrow$ Use $variables$ to create matrix containing all possible covariate combinations \\
 $formula$ $\leftarrow$ Paste $specifications$ by row and append as column to $specifications$ \\
 $formula.ranef; formula.ef$ $\leftarrow$ Separate formulas based on including a random-structure \\
-$samlple.ranef; sample.ef$ $\leftarrow$ Random, without replacement, sample from $formula.ranef; formula.ef$
+$samlple.ranef; sample.ef$ $\leftarrow$ Random, without replacement, sample from $formula.ranef; formula.ef$ \\
+$wrapper function$ $\leftarrow$ Extracting model statistics and stores them in a list\\
+\textbf{tapply}
 \BlankLine
  initialization\;
   \While{not at end of this document}{

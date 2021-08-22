@@ -1,3 +1,5 @@
 The data is regrettably too big for GitHub, hence, it can be found under the following link: 
 
 https://drive.google.com/drive/folders/1rv2VRjMSMCLRKA2z3e7mBkJAox9fDBCR?usp=sharing
+
+Please download and if needed unzip the folder. Save the .csv files in the project's "data" folder.

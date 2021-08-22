@@ -258,6 +258,9 @@ analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio 
 
 
 # Assigning significance labels
+## Alpha and z have been defined earlier, but in case that section has not been run, it's redefined here
+alpha_level = 0.05
+z = 1.96 # 95% CI
 analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
 
 # Selecting relevant columns for a better overview (covariates and "estimate_oddsratio")
@@ -471,7 +474,7 @@ ggsave(here::here("figures", "sca_plot.png"), sca_plot, width = 10, height = 6)
 #..............................................# Volcano plot #............................................#
 
 
-volcano_plot = dat_models_specifications %>% 
+volcano_plot = analysed_specifications %>% 
   filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(estimate_oddsratio, log10(p_value))) +
   geom_point(aes(colour = below_alpha), alpha = 0.3) +
