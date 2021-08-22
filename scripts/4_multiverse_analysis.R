@@ -143,7 +143,6 @@ n_sample = 1000
 prop_ranef = length(all_models[all_models_index]) / (length(all_models[!all_models_index]) + length(all_models[all_models_index]))
 prop_ef = length(all_models[!all_models_index]) / (length(all_models[!all_models_index]) + length(all_models[all_models_index]))
 
-
 ranef_sample =  sample(formula_ranef, n_sample*prop_ranef, replace = FALSE)
 ef_sample = sample(formula_ef, n_sample*prop_ef, replace = FALSE)
 
@@ -239,6 +238,7 @@ write.csv(df, here::here("data", "4_model_outcomes_data.csv"), row.names = FALSE
 # In case models, were not run, load their outcomes
 # df = read.csv(here::here("data", "4_model_outcomes_data.csv"))
 
+
 # Build data frame that includes the specifications and the analysis results
 analysed_specifications = inner_join(specifications, df, by = "formula")
 
@@ -262,6 +262,7 @@ analysed_specifications = analysed_specifications %>% filter(estimate_oddsratio 
 alpha_level = 0.05
 z = 1.96 # 95% CI
 analysed_specifications$below_alpha = with(analysed_specifications, ifelse(p_value < alpha_level, "Significant", "Non-significant"))
+
 
 # Selecting relevant columns for a better overview (covariates and "estimate_oddsratio")
 analysed_specifications = analysed_specifications[ , c(base_var, covar, "p_value", "below_alpha", "estimate_oddsratio", "ci_lower_oddsratio", "ci_upper_oddsratio")]
@@ -345,7 +346,7 @@ impact_df$below_alpha = with(impact_df, ifelse(as.numeric(impact_pvalue) < 0.05,
 write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.names = FALSE)
 
 
-#.........................................# Covariate Effects plot #.......................................#
+#.........................................# Covariate effects plot #.......................................#
 
 # Order covariate effects low to high
 impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
