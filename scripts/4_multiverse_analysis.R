@@ -278,7 +278,7 @@ write.csv(analysed_specifications, here::here("data", "4_model_outcomes_specific
 
 #............................................# Rain cloud plot #...........................................#
 
-vibration_of_effect = analysed_specifications %>%
+results_space_plot = analysed_specifications %>%
   filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
@@ -289,7 +289,7 @@ vibration_of_effect = analysed_specifications %>%
   annotate("text", x = 1.58, y = 1.375, label = "Silberzahn et al. (2018) - Median OR", color = "black") +
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
-  labs(title = "Vibration of effect due to covariate specification",
+  labs(title = "Results space defined through covariate specification",
        subtitle = paste0("N = ", nrow(analysed_specifications), ", Odds ratio (OR)", collapse = "")) +
   coord_flip() +
   theme_classic() +
@@ -310,9 +310,9 @@ vibration_of_effect = analysed_specifications %>%
         plot.subtitle = element_text(face = "italic")) +
   guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
 
-vibration_of_effect
+results_space_plot
 
-ggsave(here::here("figures", "vibration_of_effect.png"), vibration_of_effect, width = 11, height = 5)
+ggsave(here::here("figures", "results_space_plot.png"), results_space_plot, width = 11, height = 5)
 
 
 #............................................# Covariates effects #.........................................#
@@ -351,7 +351,7 @@ write.csv(impact_df, here::here("data", "4_covariate_effect_data.csv"), row.name
 # Order covariate effects low to high
 impact_df = impact_df[order(impact_df$estimate_oddsratio), ]
 
-covariate_effects = impact_df %>%
+covariate_effects_plot = impact_df %>%
   ggplot(aes(x = reorder(x = impact_names, X = as.numeric(impact_coef)), y = as.numeric(impact_coef))) +
   geom_point(aes(color = factor(below_alpha))) +
   geom_hline(yintercept = 0) +
@@ -359,7 +359,7 @@ covariate_effects = impact_df %>%
   scale_color_manual(values = c("red", "black")) +
   scale_y_continuous(name = "Estimates\n",
                      labels = scales::comma_format(accuracy = 0.05), breaks = c(seq(-0.15, 0.15, 0.05)), limits = c(-0.15, 0.15)) +
-  labs(title = "Specified effect of covatiates",
+  labs(title = "Specified covariate effects",
        subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = ""), x = "Covariates") +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
@@ -377,9 +377,9 @@ covariate_effects = impact_df %>%
         plot.subtitle = element_text(face = "italic")) +
   guides(colour = guide_legend(reverse = TRUE))
 
-covariate_effects
+covariate_effects_plot
 
-ggsave(here::here("figures", "covariate_effects.png"), covariate_effects, width = 11, height = 5)
+ggsave(here::here("figures", "covariate_effects_plot.png"), covariate_effects_plot, width = 11, height = 5)
 
 
 #................................................# SCA plot #..............................................#
@@ -432,7 +432,7 @@ top = analysed_specifications %>%
   scale_color_manual(values = c("red", "black")) +
   scale_x_discrete(name = "", expand = c(0.01, 0)) +
   scale_y_continuous(name = "Odds ratio", breaks = c(seq(0.9, 1.7, 0.1)), limits = c(0.89, 1.71), expand = c(0, 0)) +
-  labs(title = "Results of the specification-curve analysis",
+  labs(title = "Specification curve",
        subtitle = paste0("N = ", nrow(analysed_specifications), ", 95% CI", collapse = "")) +
   theme_classic() +
   theme(panel.grid.major.y = element_line(colour = "grey"),
@@ -474,15 +474,14 @@ ggsave(here::here("figures", "sca_plot.png"), sca_plot, width = 10, height = 6)
 
 #..............................................# Volcano plot #............................................#
 
-
-volcano_plot = analysed_specifications %>% 
+latent_structure_plot = analysed_specifications %>% 
   filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(estimate_oddsratio, log10(p_value))) +
   geom_point(aes(colour = below_alpha), alpha = 0.3) +
   scale_x_continuous(name = "Odds ratios", breaks = c(seq(1.0, 1.5, 0.05)), limits = c(0.99, 1.51), expand = c(0, 0)) +
   scale_y_continuous(name = "Log10 p-value") +
   scale_color_manual(values = c("red", "black")) +
-  labs(title = "Vibration of Effect",
+  labs(title = "Systemtic latent structures",
        subtitle = paste0("N = ", nrow(analysed_specifications), collapse = "")) +
   theme_classic() +
   theme(panel.grid.major = element_line(colour = "grey"),
@@ -500,6 +499,6 @@ volcano_plot = analysed_specifications %>%
         text = element_text(size = 10)) +
   guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
 
-volcano_plot
+latent_structure_plot
 
-ggsave(here::here("figures", "volcano_plot.png"), volcano_plot, width = 10, height = 6)
+ggsave(here::here("figures", "latent_structure_plot.png"), latent_structure_plot, width = 10, height = 6)
