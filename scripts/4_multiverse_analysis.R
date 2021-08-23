@@ -366,13 +366,13 @@ covariate_effects_plot = impact_df %>%
         axis.text.x = element_text(angle = 45, hjust = 1),
         plot.margin = unit(c(0.5, 1, 0.5, 1), "cm"),
         legend.position = "top",
-        legend.justification = "left",
+        legend.justification = "right",
         legend.title.align = 1,
-        legend.text = element_text(size = 11),
-        legend.direction = "vertical",
+        legend.text = element_text(size = 10),
+        legend.direction = "horizontal",
         legend.title = element_blank(),
-        legend.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
-        legend.box.margin = margin(l = 0.1, b = -0.719, unit = "cm"),
+        legend.margin = margin(t = -0.33, b = -0.2, unit = "cm"),
+        legend.box.margin = margin(t = -0.33, b = -0.2, unit = "cm"),
         plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(face = "italic")) +
   guides(colour = guide_legend(reverse = TRUE))
