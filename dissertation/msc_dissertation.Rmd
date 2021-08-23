@@ -136,7 +136,7 @@ The relevant outcome parameters of each model were extracted. These parameters w
 
 (i) The specification curve is a descriptive plot that shows raw outcome data without any aggregation. Its objective is to describe the results space while allowing the reader to identify the model specifications for each outcome [@simonsohn2020]. It has two vertically stacked components. The upper component is a sorted scatter plot. Its horizontal axis lists the specifications, and its vertical axis displays the outcome measure. The data points are sorted from lowest to highest outcome measure. This way the lowest outcome measure is on the bottom left corner and the highest in the top right one. The lower component of the plot is a table. Similar to the upper component, the horizontal axis lists the specifications, while the vertical axis lists the covariates. This arrangement allows each cell to specify the presence or absence of each covariate in a given model specification. For the integration of information from the upper and lower components, the horizontal axes are identically arranged. Thus, for each point in the upper component (i.e., for every outcome), the specified covariates can be seen in the lower component (see Figure \ref{fig:sca_plot} for an example). However, with the more than 1,000+ specifications of the current project, it was hard to identify specific covariates. Hence, the specification curve was complemented with other plots.
 
-(ii) The raincloud plot [@allen2021] combines a probability density plot, a box plot, and a scatter plot to give an unbiased, transparent view of the raw data. If the three plots are stacked vertically from top to bottom, they look like an eponymous cloud with rain drops. The strength of the raincloud plot is that it visualizes the raw data, summary statistics (median, 25th and 75th quartiles and CIs) and the probability density in a single plot. As the current project seeks to define and describe a results space, the raincloud plot is an ideal tool (for an example check Figure \ref{fig:rain_cloud_plot}). However, the plot does not allow to identify which covariates cause which outcomes. As the project also sought to understand the structure of the results space, it was essential to gain insights into how specific covariates influenced the outcomes. Therefore a third plot which complemented and extended the raincloud plot was developed.
+(ii) The raincloud plot [@allen2021] combines a probability density plot, a box plot, and a scatter plot to give an unbiased, transparent view of the raw data. If the three plots are stacked vertically from top to bottom, they look like an eponymous cloud with rain drops. The strength of the raincloud plot is that it visualizes the raw data, summary statistics (median, 25th and 75th quartiles and CIs) and the probability density in a single plot. As the current project seeks to define and describe a results space, the raincloud plot is an ideal tool (see Figure \ref{fig:results_space_plot} for an example). However, the plot does not allow to identify which covariates cause which outcomes. As the project also sought to understand the structure of the results space, it was essential to gain insights into how specific covariates influenced the outcomes. Therefore a third plot which complemented and extended the raincloud plot was developed.
 
 (iii) The third plot was a sorted scatter plot. The goal of this plot was to visualise the effects of each covariate. Given the large number of models, assessing all models and their effects individually did not make sense. Hence, the effects of each covariate were aggregated. To this end, each covariate was recoded into a binary factor: included in the model yes/no. These newly defined factors were then used as independent variables in an ANOVA. The previously calculated OR were used as dependent variables. The estimates of the fitted model were the specified effect for each covariate. These were visualised similar to the top part of the specification curve plot. The covariates were on the horizontal axis, while the OR were on the vertical axis. The lowest outcome was in the bottom left corner, and the highest was in the top right corner. Additionally, the colours of the points indicated the statistical significance of the effects.
 
@@ -325,13 +325,13 @@ sca_plot
 
 
 ## Exploring the results space – raincloud plot
-     Third, the results space was further explored by calculating raincloud plots (Figure \ref{fig:rain_cloud_plot}). The horizontal axis shows the OR. From top to bottom, the three components show the probability density distribution, the box plot and the raw data. Based on the raw data points, the results space can be defined as the interval between 1.081 and 1.383. The 1st quartile was 1.206, the median 1.248 and the 3rd quartile 1.293. Thus, the interquartile range where 50% of the data were included was relatively narrow (1.206 to 1.293), indicating a low statistical dispersion. The dashed line indicates the original result of *Team 23*, which has been the median outcome of all analysis strategies in @silberzahn2018. The outcome of *Team 23* (1.31) was included in the results space but outside the middle 50% of the data. The CI calculated by team 23 ranged from 1.10 to 1.56. The lower bound of their CI was close to the lower margin of the results space of the present study. In contrast, the upper bound of their CI was notably higher than the present results space. This suggests a potential overestimating of the variability of the results in the original analysis.
+     Third, the results space was further explored by calculating raincloud plots (Figure \ref{fig:results_space_plot}). The horizontal axis shows the OR. From top to bottom, the three components show the probability density distribution, the box plot and the raw data. Based on the raw data points, the results space can be defined as the interval between 1.081 and 1.383. The 1st quartile was 1.206, the median 1.248 and the 3rd quartile 1.293. Thus, the interquartile range where 50% of the data were included was relatively narrow (1.206 to 1.293), indicating a low statistical dispersion. The dashed line indicates the original result of *Team 23*, which has been the median outcome of all analysis strategies in @silberzahn2018. The outcome of *Team 23* (1.31) was included in the results space but outside the middle 50% of the data. The CI calculated by team 23 ranged from 1.10 to 1.56. The lower bound of their CI was close to the lower margin of the results space of the present study. In contrast, the upper bound of their CI was notably higher than the present results space. This suggests a potential overestimating of the variability of the results in the original analysis.
 
      The probability density distribution reveals another interesting feature of the data. The distribution has two peaks which suggest two latent covariate structures whose outcomes centre around two points. Those two focal points were located at about 1.13 and 1.19. Based on this graph alone, it is impossible to decipher the latent structures, i.e. determine the responsible covariates or combinations of covariates. To test the hypothesis of two latent structures, it would be interesting to observe how the distribution evolves when more specifications are run. In the presence of latent structures, the peaks should get more pronounced. In the absence of latent structures, the peaks should smoothen out, and the distribution should approach a normal distribution. \newline
 
-```{r rain_cloud_plot, fig.cap = "Raincloud plot. The results space ranges from about 1.08 to 1.38. The distribution showed two peaks which suggests an influential latent covariate structure. The original median effect was within the results space but outside the middle 50 percent of the data."}
+```{r results_space_plot, fig.cap = "Raincloud plot. The results space ranges from about 1.08 to 1.38. The distribution showed two peaks which suggests an influential latent covariate structure. The original median effect was within the results space but outside the middle 50 percent of the data."}
 
-vibration_of_effect = dat_models_specifications %>%
+results_space_plot = dat_models_specifications %>%
   filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(x = "", y = estimate_oddsratio)) +
   geom_flat_violin(aes(fill = ""), trim = FALSE, colour = "dark grey", fill = "dark grey") +
@@ -364,19 +364,19 @@ vibration_of_effect = dat_models_specifications %>%
         text = element_text(size = 10)) +
   guides(colour = guide_legend(override.aes = list(alpha = 1), reverse = TRUE))
 
-vibration_of_effect
+results_space_plot
 
 ```
 
 
 ## Specifying covariate effects – scatter plot 
-     Fourth, to better understand the relevance of the covariates, another scatter plot was calculated (Figure \ref{fig:covar_plot}). This graph shows the specified covariate effects. On the horizontal axis are the covariates; on the vertical axis are their estimated effects. The covariates are sorted from negative to positive impact. Black indicates a significant effect, red non-significant. The error bars represent the 95% CI. Four out of 15 covariates were significant. All effect sizes, including the significant covariates’, were relatively weak. The CIs were relatively small, which was likely due to the large sample size. The OR of the model without any covariates (i.e., core variables only) was 1.262. Adding the sum of all positive covariate effects (games + goals + referee country + player, respectively) to the base model resulted in a maximum possible effect of 1.357. The maximum observed OR was 1.382, however. This difference suggests that there were more impactful covariate combinations or interactions that have not yet been identified. Vice versa, subtracting the sum of all negative covariate effects from the base model resulted in an OR of 1.070, whereas the minimum observed effect was an OR of 1.081. This suggests that there were also covariate combinations with a higher negative impact. \newline
+     Fourth, to better understand the relevance of the covariates, another scatter plot was calculated (Figure \ref{fig:covariate_effects_plot}). This graph shows the specified covariate effects. On the horizontal axis are the covariates; on the vertical axis are their estimated effects. The covariates are sorted from negative to positive impact. Black indicates a significant effect, red non-significant. The error bars represent the 95% CI. Four out of 15 covariates were significant. All effect sizes, including the significant covariates’, were relatively weak. The CIs were relatively small, which was likely due to the large sample size. The OR of the model without any covariates (i.e., core variables only) was 1.262. Adding the sum of all positive covariate effects (games + goals + referee country + player, respectively) to the base model resulted in a maximum possible effect of 1.357. The maximum observed OR was 1.382, however. This difference suggests that there were more impactful covariate combinations or interactions that have not yet been identified. Vice versa, subtracting the sum of all negative covariate effects from the base model resulted in an OR of 1.070, whereas the minimum observed effect was an OR of 1.081. This suggests that there were also covariate combinations with a higher negative impact. \newline
 
-```{r covar_plot, fig.cap = "Scatter plot. Four out of 15 covariates were significant, although their effects were relatively weak. This suggests that covariates interactions were responsible for the higher outcome values."}
+```{r covariate_effects_plot, fig.cap = "Scatter plot. Four out of 15 covariates were significant, although their effects were relatively weak. This suggests that covariates interactions were responsible for the higher outcome values."}
 
 dat_covariates = dat_covariates[order(dat_covariates$estimate_oddsratio), ]
 
-covariate_effects = dat_covariates %>%
+covariate_effects_plot = dat_covariates %>%
   ggplot(aes(x = reorder(x = impact_names, X = impact_coef), impact_coef)) +
   geom_point(aes(color = below_alpha)) +
   geom_hline(yintercept = 0) +
@@ -403,17 +403,17 @@ covariate_effects = dat_covariates %>%
         text = element_text(size = 10)) +
   guides(colour = guide_legend(reverse = TRUE))
 
-covariate_effects
+covariate_effects_plot
 
 ```
 
 
 ## Exploring the results structure – volcano plot
-     Lastly, another graph was produced despite not being planned. Therefore, it is only used to strengthen previous points and probe future research. The results above suggest one or more meaningful latent covariate combinations; these were further explored. Although @patel2015 had a different objective, their methodology was similar to the current project. They visualised the outcomes as a so-called volcano plot (see Figure \ref{fig:rain_cloud_plot}), showing the relationship between the p-values and effect sizes. A similar graph was calculated for the current project. The two (potentially three) distinct “streams” provided further support for two (or three) distinct underlying constructs. Future research might specify which covariate combinations underly these structures.
+     Lastly, another graph was produced despite not being planned. Therefore, it is only used to strengthen previous points and probe future research. The results above suggest one or more meaningful latent covariate combinations; these were further explored. Although @patel2015 had a different objective, their methodology was similar to the current project. They visualised the outcomes as a so-called volcano plot (see Figure \ref{fig:latent_structure_plot}), showing the relationship between the p-values and effect sizes. A similar graph was calculated for the current project. The two (potentially three) distinct “streams” provided further support for two (or three) distinct underlying constructs. Future research might specify which covariate combinations underly these structures.
 
-```{r volcano_plot, fig.cap = "Volcano plot. The exploratory data visualisation supports the hypothesis of a systematic latent covariate structure with at least two underlying latent constructs."}
+```{r latent_structure_plot, fig.cap = "Volcano plot. The exploratory data visualisation supports the hypothesis of a systematic latent covariate structure with at least two underlying latent constructs."}
 
-volcano_plot = dat_models_specifications %>% 
+latent_structure_plot = dat_models_specifications %>% 
   filter(estimate_oddsratio < 4) %>% 
   ggplot(aes(estimate_oddsratio, log10(p_value))) +
   geom_point(aes(colour = below_alpha), alpha = 0.3) +
@@ -438,7 +438,7 @@ volcano_plot = dat_models_specifications %>%
         text = element_text(size = 10)) +
   guides(colour = guide_legend(override.aes = list(alpha = 1, size = 1), reverse = TRUE))
 
-volcano_plot
+latent_structure_plot
 
 ```
 
